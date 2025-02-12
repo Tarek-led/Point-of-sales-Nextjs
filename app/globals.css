@@ -75,7 +75,7 @@
     font-size: 12px;
   }
   .print\:font-mono {
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'Courier New', Courier, monospace, sans-serif;
   }
   .print\:text-center {
     text-align: center;

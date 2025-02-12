@@ -12,7 +12,6 @@ import {
 } from '@tabler/icons-react';
 import DigitalClock from '../clock/clock';
 import DateComponent from '../date/date';
-import WeatherComponent from '../weather/weather';
 import DashboardCard from '../card/card';
 import NetworkSpeed from '../networkspeed/networkspeed';
 export function BentoGridHome() {
@@ -43,9 +42,8 @@ const items = [
   {
     title: "Human Can't Predict A Future",
     description: (
-      <span className="text-sm">Don't forget bring you'r umberella.</span>
+      <span className="text-sm">Weather api use to be here</span>
     ),
-    header: <WeatherComponent />,
     className: 'md:col-span-1',
     icon: <IconCloud className="h-4 w-4 text-neutral-500" />,
   },
