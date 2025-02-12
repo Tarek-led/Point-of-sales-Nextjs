@@ -11,15 +11,18 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { DeleteAlertDialog } from "./alertDelete";
 import { SheetEdit } from "./sheetEdit";
-import { CatProduct } from "@prisma/client";
 
+// Manually define categories since SQLite does not support enums
+const CatProduct = ["ELECTRO", "DRINK", "FOOD", "FASHION"];
+
+// Fix Product type
 type Product = {
   id: string;
   sellprice: number;
   productstock: {
     id: string;
     name: string;
-    cat: CatProduct;
+    cat: string; // ✅ Change from CatProduct to string
     stock: number;
     price: number;
   };
@@ -48,19 +51,11 @@ const Dropdown = ({ product }: { product: Product }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => setEditOpen(true)}>
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setDeleteOpen(true)}>
-            Delete
-          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setEditOpen(true)}>Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setDeleteOpen(true)}>Delete</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <DeleteAlertDialog
-        open={deleteOpen}
-        onClose={handleDeleteClose}
-        data={product}
-      />
+      <DeleteAlertDialog open={deleteOpen} onClose={handleDeleteClose} data={product} />
       <SheetEdit open={editOpen} onClose={handleEditClose} data={product} />
     </>
   );

@@ -1,4 +1,3 @@
-import { UserRole, CatProduct } from '@prisma/client';
 import { faker } from '@faker-js/faker';
 import Decimal from 'decimal.js';
 
@@ -23,7 +22,7 @@ export function fakeUserComplete() {
     emailVerified: undefined,
     image: undefined,
     password: undefined,
-    role: UserRole.UNKNOW,
+    role: "UNKOWN",
   };
 }
 export function fakeProductStock() {
@@ -32,7 +31,7 @@ export function fakeProductStock() {
     imageProduct: undefined,
     price: faker.number.float(),
     stock: faker.number.float(),
-    cat: faker.helpers.arrayElement([CatProduct.ELECTRO, CatProduct.DRINK, CatProduct.FOOD, CatProduct.FASHION] as const),
+    cat: faker.helpers.arrayElement(["ELECTRO", "DRINK", "FOOD", "FASHION"]),
   };
 }
 export function fakeProductStockComplete() {
@@ -42,7 +41,7 @@ export function fakeProductStockComplete() {
     imageProduct: undefined,
     price: faker.number.float(),
     stock: faker.number.float(),
-    cat: faker.helpers.arrayElement([CatProduct.ELECTRO, CatProduct.DRINK, CatProduct.FOOD, CatProduct.FASHION] as const),
+    cat: faker.helpers.arrayElement(["ELECTRO", "DRINK", "FOOD", "FASHION"]),
   };
 }
 export function fakeProduct() {

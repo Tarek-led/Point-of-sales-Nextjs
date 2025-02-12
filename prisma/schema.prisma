@@ -1,38 +1,12 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
-generator custom_generator {
-  provider = "prisma-generator-fake-data"
-}
-generator dbml {
-  provider = "prisma-dbml-generator"
-}
-
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
-enum UserRole {
-  OWNER
-  WORKER
-  UNKNOW
-}
-
-enum CatProduct {
-  ELECTRO
-  DRINK
-  FOOD
-  FASHION
-}
 
 model User {
   id            String    @id @default(cuid())
@@ -42,7 +16,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  role          UserRole  @default(UNKNOW)
+  role          String  @default("UNKNOW")
 }
 
 model ProductStock {
@@ -51,7 +25,7 @@ model ProductStock {
   imageProduct String?
   price        Float
   stock        Float
-  cat          CatProduct
+  cat          String
 
   Product Product[]
 }
@@ -91,4 +65,3 @@ model ShopData {
   tax Int?
   name String?
 }
-

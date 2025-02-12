@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import isOnline from 'is-online';
+// import isOnline from 'is-online';
 
 export const fetchProduct = async ({
   take = 5,
@@ -10,19 +10,20 @@ export const fetchProduct = async ({
   take: number;
   skip: number;
 }) => {
-  const isOnlineResult = await isOnline();
+  // const isOnlineResult = await isOnline();
 
-  if (!isOnlineResult) {
-    throw new Error('No internet connection');
-    return;
-  }
+  // if (!isOnlineResult) {
+  //   throw new Error('No internet connection');
+  //   return;
+  // }
 
   ('use server');
   try {
+    // console.log('Querying products with:', query);
     const results = await db.product.findMany({
       where: {
         productstock: {
-          name: { contains: query, mode: 'insensitive' },
+          name: { contains: query?.toLowerCase()  },
         },
       },
       skip,
@@ -47,6 +48,7 @@ export const fetchProduct = async ({
         },
       },
     });
+    // console.log('Fetched products:', results);
 
     const total = await db.product.count();
 

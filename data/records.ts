@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
-import isOnline from 'is-online';
+// import isOnline from 'is-online';
+
 export const fetchRecords = async ({
   take = 5,
   skip = 0,
@@ -9,18 +10,19 @@ export const fetchRecords = async ({
   take: number;
   skip: number;
 }) => {
-  const isOnlineResult = await isOnline();
+  // const isOnlineResult = await isOnline();
 
-  if (!isOnlineResult) {
-    throw new Error('No internet connection');
-    return;
-  }
+  // if (!isOnlineResult) {
+  //   throw new Error('No internet connection');
+  //   return;
+  // }
+
   ('use server');
   try {
     const results = await db.transaction.findMany({
-      where: {
-        id: { contains: query, mode: 'insensitive' },
-      },
+      where: query
+        ? { id: { contains: query.toLowerCase() } } // ✅ Remove mode: "insensitive"
+        : undefined, // ✅ Prevents error when query is undefined
       skip,
       take,
       select: {
@@ -41,7 +43,7 @@ export const fetchRecords = async ({
       },
     });
 
-    // Hitung total quantity untuk setiap transaksi
+    // ✅ Calculate total quantity for each transaction
     const resultsWithTotalQuantity = results.map((transaction) => {
       const totalQuantity = transaction.products.reduce(
         (sum, product) => sum + product.quantity,

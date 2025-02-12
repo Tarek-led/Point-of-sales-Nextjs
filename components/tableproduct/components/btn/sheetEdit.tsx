@@ -20,19 +20,21 @@ import {
 } from '@/components/ui/select';
 import { Cross2Icon, ReloadIcon } from '@radix-ui/react-icons';
 import { useEffect, useState } from 'react';
-import { CatProduct } from '@prisma/client';
 import { productSchema } from '@/schema';
 import { z } from 'zod';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
+
+const CatProduct = ["ELECTRO", "DRINK", "FOOD", "FASHION"];
+
 type Data = {
   id: string;
   sellprice: number;
   productstock: {
     id: string;
     name: string;
-    cat: CatProduct;
+    cat: string;
     stock: number;
     price: number;
   };
@@ -65,7 +67,7 @@ export function SheetEdit({
   const stockProductNumber = parseFloat(String(stockProduct)) || 0;
   const sellPriceNumber = parseFloat(String(sellPrice)) || 0;
 
-  const catProductValues = Object.values(CatProduct);
+  const catProductValues = CatProduct;
   const filteredCatProducts = catProductValues.filter((product) =>
     product.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -249,7 +251,7 @@ export function SheetEdit({
             <Select
               value={categoryProduct}
               onValueChange={(newValue) => {
-                setCategories(newValue as CatProduct);
+                setCategories(newValue);
                 setError((prevError) => ({
                   ...prevError,
                   category: '',

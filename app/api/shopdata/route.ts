@@ -11,6 +11,11 @@ export async function GET(req: NextRequest) {
     // Fetch shopData from the database
     const shopData = await prisma.shopData.findMany();
 
+    // Ensure that we have data
+    if (shopData.length === 0) {
+      return NextResponse.json({ error: 'No shop data found' }, { status: 404 });
+    }
+
     // Extract the first item from the result
     const data = shopData[0];
 

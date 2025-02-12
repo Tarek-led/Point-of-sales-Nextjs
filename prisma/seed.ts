@@ -1,19 +1,27 @@
 import { PrismaClient } from '@prisma/client';
 import { fakeTransactionComplete, fakeProductStockComplete } from './fake-data';
 
+// Initialize Prisma Client with SQLite
 const prisma = new PrismaClient();
 
-// A `main` function so that we can use async/await
 async function main() {
-  await prisma.productStock.deleteMany({});
+  console.log("Seeding database: SQLite (Offline Mode)");
+
+  // Clear existing data
+  await prisma.productStock.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.onSaleProduct.deleteMany();
+  await prisma.transaction.deleteMany();
+  await prisma.shopData.deleteMany();
+  await prisma.user.deleteMany();
+
+  // Insert new fake data
   const fakerRounds = 40;
   for (let i = 0; i < fakerRounds; i++) {
     const product = await prisma.productStock.create({
-      data: {
-        ...fakeProductStockComplete(),
-      },
+      data: fakeProductStockComplete(),
     });
-    console.log(`Created transactions with id ${product.id} and name`);
+    console.log(`✅ Created Product with id ${product.id}`);
   }
 }
 
@@ -22,7 +30,7 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error(e);
+    console.error("Error in seeding:", e);
     await prisma.$disconnect();
     process.exit(1);
   });
