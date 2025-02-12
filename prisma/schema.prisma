@@ -7,9 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model User {
-  id            String    @id @default(cuid())
+  id            String    @id @default(uuid()) // Use UUID for User id
   name          String
   username      String
   email         String?   @unique
@@ -20,29 +19,29 @@ model User {
 }
 
 model ProductStock {
-  id           String     @id @unique
+  id           String     @id @default(uuid()) // Use UUID for ProductStock id
   name         String
   imageProduct String?
   price        Float
   stock        Float
   cat          String
 
-  Product Product[]
+  Product Product[] // Relation to Product
 }
 
 model Product {
-  id            String          @id @default(cuid())
+  id            String          @id @default(uuid()) // Use UUID for Product id
   productId     String
   productstock  ProductStock    @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   sellprice     Float
   createdAt     DateTime        @default(now())
-  OnSaleProduct OnSaleProduct[]
+  OnSaleProduct OnSaleProduct[] // Relation to OnSaleProduct
 
   @@unique([productId])
 }
 
 model OnSaleProduct {
-  id            String      @id @default(cuid())
+  id            String      @id @default(uuid()) // Use UUID for OnSaleProduct id
   productId     String
   quantity      Int
   saledate      DateTime    @default(now())
@@ -54,15 +53,15 @@ model OnSaleProduct {
 }
 
 model Transaction {
-  id          String          @id @default(cuid())
+  id          String          @id @default(uuid()) // Use UUID for Transaction id
   totalAmount Decimal?
   createdAt   DateTime        @default(now())
   isComplete  Boolean         @default(false)
-  products    OnSaleProduct[]
+  products    OnSaleProduct[] // Relation to OnSaleProduct
 }
 
 model ShopData {
-  id          String          @id @default(cuid())
-  tax Int?
-  name String?
+  id    String @id @default(uuid()) // Use UUID for ShopData id
+  tax   Int?
+  name  String?
 }

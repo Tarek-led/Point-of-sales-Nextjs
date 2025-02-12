@@ -1,9 +1,9 @@
 // app/api/sync/route.ts
-import { syncProductsToSupabase } from '../../services/sync';
+import { syncAllDataToSupabase } from '../../services/sync';
 
 export async function POST() {
   try {
-    await syncProductsToSupabase();
+    await syncAllDataToSupabase();
     return new Response(JSON.stringify({ message: 'Data synced successfully to Supabase' }), { status: 200 });
   } catch (error) {
     console.error('Sync error:', error);
