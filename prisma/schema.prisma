@@ -35,6 +35,7 @@ model Product {
   productId     String
   productstock  ProductStock    @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   sellprice     Float
+  createdAt     DateTime        @default(now())
   OnSaleProduct OnSaleProduct[]
 
   @@unique([productId])
