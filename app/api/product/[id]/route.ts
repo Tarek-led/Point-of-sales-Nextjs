@@ -1,4 +1,4 @@
-import { CatProduct, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { NextResponse } from 'next/server';
 
 // Initialize Prisma client
@@ -21,7 +21,7 @@ export const PATCH = async (
         name: body.productName,
         stock: body.stockProduct,
         price: body.buyPrice,
-        cat: body.category as CatProduct,
+        cat: body.category,
         Product: {
           update: {
             where: {

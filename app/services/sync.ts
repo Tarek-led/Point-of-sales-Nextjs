@@ -10,69 +10,43 @@ export async function syncAllDataToSupabase() {
       },
     });
 
-    for (const transaction of transactions) {
-      // Check if the transaction already exists in Supabase using transactionId
-      const { data: existingTransaction, error: transactionError } = await supabase
-        .from('transactions')
-        .select()
-        .eq('id', transaction.id)
-        .single(); // Expect only one row for the given transaction.id
+    const transactionIds = transactions.map((transaction) => transaction.id);
 
-      if (transactionError && transactionError.code === 'PGRST116') {
-        // No existing transaction, insert a new one
-        const upsertTransactionData = {
-          id: transaction.id, // Use transaction.id
-          total_amount: transaction.totalAmount,
-          created_at: transaction.createdAt,
-          is_complete: transaction.isComplete,
-        };
+    // Fetch all transactions from Supabase
+    const { data: supabaseTransactions, error: supabaseTransactionError } = await supabase
+      .from('transactions')
+      .select('id');
 
-        const { error: upsertTransactionError } = await supabase
-          .from('transactions')
-          .upsert(upsertTransactionData)
-          .select();
-
-        if (upsertTransactionError) {
-          console.error('Error syncing transaction:', upsertTransactionError);
-        } else {
-          console.log(`Successfully synced transaction: ${transaction.id}`);
-        }
-      }
-
-      // Sync OnSaleProduct relationships for the transaction
-      if (Array.isArray(transaction.products)) {
-        for (const sale of transaction.products) {
-          const { data: existingSale, error: saleError } = await supabase
+    if (supabaseTransactionError) {
+      console.error('Error fetching transactions from Supabase:', supabaseTransactionError);
+    } else {
+      // Delete transactions from Supabase that no longer exist locally
+      for (const supabaseTransaction of supabaseTransactions) {
+        if (!transactionIds.includes(supabaseTransaction.id)) {
+          // Delete related sale records if the transaction is deleted locally
+          const { error: deleteSaleError } = await supabase
             .from('on_sale_products')
-            .select()
-            .eq('product_id', sale.productId)
-            .eq('transaction_id', transaction.id);
+            .delete()
+            .eq('transaction_id', supabaseTransaction.id);
 
-          if (saleError && saleError.code !== '23505') {
-            console.error('Error syncing sale data for transaction:', saleError);
+          if (deleteSaleError) {
+            console.error('Error deleting sale data for transaction:', deleteSaleError);
           } else {
-            const upsertSaleData = {
-              id: existingSale?.[0]?.id || `${sale.productId}-${transaction.id}`, // Ensure unique ID
-              product_id: sale.productId,
-              quantity: sale.quantity,
-              saledate: sale.saledate,
-              transaction_id: transaction.id, // Use transaction.id directly as string
-            };
+            console.log(`Successfully deleted sale data for transaction: ${supabaseTransaction.id}`);
+          }
 
-            const { error: upsertSaleError } = await supabase
-              .from('on_sale_products')
-              .upsert(upsertSaleData)
-              .select();
+          // Delete the transaction itself
+          const { error: deleteTransactionError } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('id', supabaseTransaction.id);
 
-            if (upsertSaleError) {
-              console.error('Error syncing sale data for transaction:', upsertSaleError);
-            } else {
-              console.log(`Successfully synced sale data for transaction: ${transaction.id}`);
-            }
+          if (deleteTransactionError) {
+            console.error('Error deleting transaction:', deleteTransactionError);
+          } else {
+            console.log(`Successfully deleted transaction: ${supabaseTransaction.id}`);
           }
         }
-      } else {
-        console.log(`No sale data for transaction ${transaction.id}, skipping.`);
       }
     }
 
@@ -84,8 +58,61 @@ export async function syncAllDataToSupabase() {
       },
     });
 
+    const productIds = products.map((product) => product.productId);
+
+    // Fetch all products from Supabase
+    const { data: supabaseProducts, error: supabaseProductError } = await supabase
+      .from('products')
+      .select('product_id');
+
+    if (supabaseProductError) {
+      console.error('Error fetching products from Supabase:', supabaseProductError);
+    } else {
+      // Delete products from Supabase that no longer exist locally
+      for (const supabaseProduct of supabaseProducts) {
+        if (!productIds.includes(supabaseProduct.product_id)) {
+          // Delete related product stock from Supabase
+          const { error: deleteProductStockError } = await supabase
+            .from('product_stocks')
+            .delete()
+            .eq('name', supabaseProduct.product_id);
+
+          if (deleteProductStockError) {
+            console.error('Error deleting product stock from Supabase:', deleteProductStockError);
+          } else {
+            console.log(`Successfully deleted product stock for product: ${supabaseProduct.product_id}`);
+          }
+
+          // Delete the product itself
+          const { error: deleteProductError } = await supabase
+            .from('products')
+            .delete()
+            .eq('product_id', supabaseProduct.product_id);
+
+          if (deleteProductError) {
+            console.error('Error deleting product from Supabase:', deleteProductError);
+          } else {
+            console.log(`Successfully deleted product: ${supabaseProduct.product_id}`);
+          }
+
+          // Delete corresponding sales (on_sale_products)
+          const { error: deleteSalesError } = await supabase
+            .from('on_sale_products')
+            .delete()
+            .eq('product_id', supabaseProduct.product_id);
+
+          if (deleteSalesError) {
+            console.error('Error deleting sales data for product:', deleteSalesError);
+          } else {
+            console.log(`Successfully deleted sales data for product: ${supabaseProduct.product_id}`);
+          }
+        }
+      }
+    }
+
+    // Now, sync products and product stocks after transactions and on_sale_products
     for (const product of products) {
-      // Sync product
+      // Sync product if not deleted locally
       const { data: existingProduct, error: productError } = await supabase
         .from('products')
         .select()
