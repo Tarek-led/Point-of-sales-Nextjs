@@ -3,7 +3,80 @@ import { supabase } from '@/lib/supabase'; // Supabase client
 
 export async function syncAllDataToSupabase() {
   try {
-    // Fetch all products from SQLite (using Prisma)
+    // Sync transactions table first
+    const transactions = await db.transaction.findMany({
+      include: {
+        products: true, // Include the products sold in each transaction
+      },
+    });
+
+    for (const transaction of transactions) {
+      // Check if the transaction already exists in Supabase using transactionId
+      const { data: existingTransaction, error: transactionError } = await supabase
+        .from('transactions')
+        .select()
+        .eq('id', transaction.id)
+        .single(); // Expect only one row for the given transaction.id
+
+      if (transactionError && transactionError.code === 'PGRST116') {
+        // No existing transaction, insert a new one
+        const upsertTransactionData = {
+          id: transaction.id, // Use transaction.id
+          total_amount: transaction.totalAmount,
+          created_at: transaction.createdAt,
+          is_complete: transaction.isComplete,
+        };
+
+        const { error: upsertTransactionError } = await supabase
+          .from('transactions')
+          .upsert(upsertTransactionData)
+          .select();
+
+        if (upsertTransactionError) {
+          console.error('Error syncing transaction:', upsertTransactionError);
+        } else {
+          console.log(`Successfully synced transaction: ${transaction.id}`);
+        }
+      }
+
+      // Sync OnSaleProduct relationships for the transaction
+      if (Array.isArray(transaction.products)) {
+        for (const sale of transaction.products) {
+          const { data: existingSale, error: saleError } = await supabase
+            .from('on_sale_products')
+            .select()
+            .eq('product_id', sale.productId)
+            .eq('transaction_id', transaction.id);
+
+          if (saleError && saleError.code !== '23505') {
+            console.error('Error syncing sale data for transaction:', saleError);
+          } else {
+            const upsertSaleData = {
+              id: existingSale?.[0]?.id || `${sale.productId}-${transaction.id}`, // Ensure unique ID
+              product_id: sale.productId,
+              quantity: sale.quantity,
+              saledate: sale.saledate,
+              transaction_id: transaction.id, // Use transaction.id directly as string
+            };
+
+            const { error: upsertSaleError } = await supabase
+              .from('on_sale_products')
+              .upsert(upsertSaleData)
+              .select();
+
+            if (upsertSaleError) {
+              console.error('Error syncing sale data for transaction:', upsertSaleError);
+            } else {
+              console.log(`Successfully synced sale data for transaction: ${transaction.id}`);
+            }
+          }
+        }
+      } else {
+        console.log(`No sale data for transaction ${transaction.id}, skipping.`);
+      }
+    }
+
+    // Now, sync products and product stocks after transactions and on_sale_products are synced
     const products = await db.product.findMany({
       include: {
         productstock: true, // Include related product stock
@@ -11,9 +84,8 @@ export async function syncAllDataToSupabase() {
       },
     });
 
-    // Sync products and product stock to Supabase
     for (const product of products) {
-      // Check if the product already exists in Supabase using productId
+      // Sync product
       const { data: existingProduct, error: productError } = await supabase
         .from('products')
         .select()
@@ -103,79 +175,7 @@ export async function syncAllDataToSupabase() {
       }
     }
 
-    // Sync transactions table
-    const transactions = await db.transaction.findMany({
-      include: {
-        products: true, // Include the products sold in each transaction
-      },
-    });
-
-    for (const transaction of transactions) {
-      // Check if the transaction already exists in Supabase using transactionId
-      const { data: existingTransaction, error: transactionError } = await supabase
-        .from('transactions')
-        .select()
-        .eq('id', transaction.id)
-        .single();
-
-      if (transactionError && transactionError.code !== '23505') {
-        console.error('Error syncing transaction:', transactionError);
-      } else {
-        const upsertTransactionData = {
-          id: existingTransaction?.id || transaction.id, // Use existing transaction id
-          total_amount: transaction.totalAmount,
-          created_at: transaction.createdAt,
-          is_complete: transaction.isComplete,
-        };
-
-        const { error: upsertTransactionError } = await supabase
-          .from('transactions')
-          .upsert(upsertTransactionData)
-          .select();
-
-        if (upsertTransactionError) {
-          console.error('Error syncing transaction:', upsertTransactionError);
-        } else {
-          console.log(`Successfully synced transaction: ${transaction.id}`);
-        }
-      }
-
-      // Sync OnSaleProduct relationships for the transaction
-      if (Array.isArray(transaction.products)) {
-        for (const sale of transaction.products) {
-          const { data: existingSale, error: saleError } = await supabase
-            .from('on_sale_products')
-            .select()
-            .eq('product_id', sale.productId)
-            .eq('transaction_id', transaction.id);
-
-          if (saleError && saleError.code !== '23505') {
-            console.error('Error syncing sale data for transaction:', saleError);
-          } else {
-            const upsertSaleData = {
-              product_id: sale.productId,
-              quantity: sale.quantity,
-              transaction_id: transaction.id, // Use transaction.id directly as string
-            };
-
-            const { error: upsertSaleError } = await supabase
-              .from('on_sale_products')
-              .upsert(upsertSaleData)
-              .select();
-
-            if (upsertSaleError) {
-              console.error('Error syncing sale data for transaction:', upsertSaleError);
-            } else {
-              console.log(`Successfully synced sale data for transaction: ${transaction.id}`);
-            }
-          }
-        }
-      } else {
-        console.log(`No sale data for transaction ${transaction.id}, skipping.`);
-      }
-    }
-
-    // Sync shop_data table (assuming you need to sync this too)
+    // Sync shop_data table
     const shopData = await db.shopData.findFirst();
     if (shopData) {
       // Check if the shop data already exists in Supabase using the 'name' field
