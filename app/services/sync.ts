@@ -71,11 +71,11 @@ export async function syncAllDataToSupabase() {
       // Delete products from Supabase that no longer exist locally
       for (const supabaseProduct of supabaseProducts) {
         if (!productIds.includes(supabaseProduct.product_id)) {
-          // Delete related product stock from Supabase
+          // Delete related product stock from Supabase using the `id` which is the same as `product_id`
           const { error: deleteProductStockError } = await supabase
             .from('product_stocks')
             .delete()
-            .eq('name', supabaseProduct.product_id);
+            .eq('id', supabaseProduct.product_id); // Use `id` which is same as `product_id`
 
           if (deleteProductStockError) {
             console.error('Error deleting product stock from Supabase:', deleteProductStockError);
@@ -144,13 +144,13 @@ export async function syncAllDataToSupabase() {
       const { data: existingStock, error: stockError } = await supabase
         .from('product_stocks')
         .select()
-        .eq('name', product.productstock.name);
+        .eq('id', product.productId); // Use `id` to match product stock
 
       if (stockError && stockError.code !== '23505') {
         console.error('Error syncing product stock:', stockError);
       } else {
         const upsertStockData = {
-          id: existingStock?.[0]?.id || product.productstock.name, // Use existing ID or the name as the ID
+          id: existingStock?.[0]?.id || product.productstock.id, // Use existing ID or the name as the ID
           name: product.productstock.name,
           price: product.productstock.price,
           stock: product.productstock.stock,
