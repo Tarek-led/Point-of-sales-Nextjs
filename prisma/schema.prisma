@@ -8,7 +8,7 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid()) // Use UUID for User id
+  id            String    @id // Use String for User id
   name          String
   username      String
   email         String?   @unique
@@ -19,7 +19,7 @@ model User {
 }
 
 model ProductStock {
-  id           String     @id @default(uuid()) // Use UUID for ProductStock id
+  id           String     @id // Use String for ProductStock id
   name         String
   imageProduct String?
   price        Float
@@ -30,7 +30,7 @@ model ProductStock {
 }
 
 model Product {
-  id            String          @id @default(uuid()) // Use UUID for Product id
+  id            String          @id // Use String for Product id
   productId     String
   productstock  ProductStock    @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   sellprice     Float
@@ -41,7 +41,7 @@ model Product {
 }
 
 model OnSaleProduct {
-  id            String      @id @default(uuid()) // Use UUID for OnSaleProduct id
+  id            String      @id // Use String for OnSaleProduct id
   productId     String
   quantity      Int
   saledate      DateTime    @default(now())
@@ -53,7 +53,7 @@ model OnSaleProduct {
 }
 
 model Transaction {
-  id          String          @id @default(uuid()) // Use UUID for Transaction id
+  id          String          @id // Use String for Transaction id
   totalAmount Decimal?
   createdAt   DateTime        @default(now())
   isComplete  Boolean         @default(false)
@@ -61,7 +61,7 @@ model Transaction {
 }
 
 model ShopData {
-  id    String @id @default(uuid()) // Use UUID for ShopData id
+  id    String @id // Use String for ShopData id
   tax   Int?
   name  String?
 }
