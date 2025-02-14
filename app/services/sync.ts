@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'; // Supabase client
 
 export async function syncAllDataToSupabase() {
   try {
-    // Sync transactions table first
+    // Step 1: Sync transactions table first
     const transactions = await db.transaction.findMany({
       include: {
         products: true, // Include the products sold in each transaction
@@ -50,7 +50,37 @@ export async function syncAllDataToSupabase() {
       }
     }
 
-    // Now, sync products and product stocks after transactions and on_sale_products are synced
+    // Step 2: Now, sync transactions that exist locally but not in Supabase
+    for (const transaction of transactions) {
+      const { data: existingTransaction, error: transactionError } = await supabase
+        .from('transactions')
+        .select()
+        .eq('id', transaction.id);
+
+      if (transactionError) {
+        console.error('Error syncing transaction:', transactionError);
+      } else {
+        const upsertTransactionData = {
+          id: existingTransaction?.[0]?.id || transaction.id,
+          total_amount: transaction.totalAmount,
+          created_at: transaction.createdAt,
+          is_complete: transaction.isComplete,
+        };
+
+        const { error: upsertTransactionError } = await supabase
+          .from('transactions')
+          .upsert(upsertTransactionData)
+          .select();
+
+        if (upsertTransactionError) {
+          console.error('Error syncing transaction:', upsertTransactionError);
+        } else {
+          console.log(`Successfully synced transaction: ${transaction.id}`);
+        }
+      }
+    }
+
+    // Step 3: Now, sync products and product stocks after transactions are synced
     const products = await db.product.findMany({
       include: {
         productstock: true, // Include related product stock
@@ -110,67 +140,32 @@ export async function syncAllDataToSupabase() {
       }
     }
 
-    // Now, sync products and product stocks after transactions and on_sale_products
+    // Step 4: Sync OnSaleProduct data
     for (const product of products) {
-      // Sync product if not deleted locally
-      const { data: existingProduct, error: productError } = await supabase
-        .from('products')
-        .select()
-        .eq('product_id', product.productId);
-
-      if (productError && productError.code !== '23505') {
-        console.error('Error syncing product:', productError);
-      } else {
-        const upsertProductData = {
-          id: existingProduct?.[0]?.id || product.productId, // Use existing ID or the productId as the ID
-          product_id: product.productId,
-          sellprice: product.sellprice,
-          created_at: product.createdAt,
-        };
-
-        const { error: upsertProductError } = await supabase
-          .from('products')
-          .upsert(upsertProductData)
-          .select();
-
-        if (upsertProductError) {
-          console.error('Error syncing product:', upsertProductError);
-        } else {
-          console.log(`Successfully synced product: ${product.productId}`);
-        }
-      }
-
-      // Sync ProductStock data with a similar approach
-      const { data: existingStock, error: stockError } = await supabase
-        .from('product_stocks')
-        .select()
-        .eq('id', product.productId); // Use `id` to match product stock
-
-      if (stockError && stockError.code !== '23505') {
-        console.error('Error syncing product stock:', stockError);
-      } else {
-        const upsertStockData = {
-          id: existingStock?.[0]?.id || product.productstock.id, // Use existing ID or the name as the ID
-          name: product.productstock.name,
-          price: product.productstock.price,
-          stock: product.productstock.stock,
-          cat: product.productstock.cat,
-        };
-
-        const { error: upsertStockError } = await supabase
-          .from('product_stocks')
-          .upsert(upsertStockData)
-          .select();
-
-        if (upsertStockError) {
-          console.error('Error syncing product stock:', upsertStockError);
-        } else {
-          console.log(`Successfully synced product stock: ${product.productstock.name}`);
-        }
-      }
-
-      // Sync OnSaleProduct data similarly...
+      // Sync OnSaleProduct data for each product
       for (const sale of product.OnSaleProduct) {
+        // Ensure the corresponding transaction exists in Supabase
+        const { data: existingTransaction, error: transactionError } = await supabase
+          .from('transactions')
+          .select()
+          .eq('id', sale.transaction.id);
+
+        if (transactionError) {
+          console.error('Error fetching transaction:', transactionError);
+        } else if (!existingTransaction || existingTransaction.length === 0) {
+          // Insert missing transaction if it doesn't exist
+          const { error: insertTransactionError } = await supabase
+            .from('transactions')
+            .insert([{ id: sale.transaction.id }]);
+
+          if (insertTransactionError) {
+            console.error('Error inserting transaction:', insertTransactionError);
+          } else {
+            console.log(`Successfully inserted missing transaction: ${sale.transaction.id}`);
+          }
+        }
+
+        // Sync sale data after ensuring transaction exists
         const { data: existingSale, error: saleError } = await supabase
           .from('on_sale_products')
           .select()
@@ -198,37 +193,6 @@ export async function syncAllDataToSupabase() {
           } else {
             console.log(`Successfully synced sale data for product: ${product.productId}`);
           }
-        }
-      }
-    }
-
-    // Sync shop_data table
-    const shopData = await db.shopData.findFirst();
-    if (shopData) {
-      // Check if the shop data already exists in Supabase using the 'name' field
-      const { data: existingShopData, error: shopDataError } = await supabase
-        .from('shop_data')
-        .select()
-        .eq('name', shopData.name);
-
-      if (shopDataError && shopDataError.code !== '23505') {
-        console.error('Error syncing shop data:', shopDataError);
-      } else {
-        const upsertShopData = {
-          id: existingShopData?.[0]?.id || shopData.name, // Use name or generate custom string ID
-          tax: shopData.tax,
-          name: shopData.name,
-        };
-
-        const { error: upsertShopDataError } = await supabase
-          .from('shop_data')
-          .upsert(upsertShopData)
-          .select();
-
-        if (upsertShopDataError) {
-          console.error('Error syncing shop data:', upsertShopDataError);
-        } else {
-          console.log(`Successfully synced shop data: ${shopData.name}`);
         }
       }
     }
