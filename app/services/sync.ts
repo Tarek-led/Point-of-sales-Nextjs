@@ -140,6 +140,101 @@ export async function syncAllDataToSupabase() {
       }
     }
 
+    // --- Upsert local products and product stocks ---
+    for (const product of products) {
+      // Upsert product record
+      const { data: existingProduct, error: productError } = await supabase
+        .from('products')
+        .select()
+        .eq('product_id', product.productId);
+
+      if (productError && productError.code !== '23505') {
+        console.error('Error syncing product:', productError);
+      } else {
+        const upsertProductData = {
+          id: existingProduct?.[0]?.id || product.productId,
+          product_id: product.productId,
+          sellprice: product.sellprice,
+          created_at: product.createdAt,
+        };
+
+        const { error: upsertProductError } = await supabase
+          .from('products')
+          .upsert(upsertProductData)
+          .select();
+
+        if (upsertProductError) {
+          console.error('Error syncing product:', upsertProductError);
+        } else {
+          console.log(`Successfully synced product: ${product.productId}`);
+        }
+      }
+
+      // Upsert product stock record (if available)
+      if (product.productstock) {
+        const { data: existingStock, error: stockError } = await supabase
+          .from('product_stocks')
+          .select()
+          .eq('name', product.productstock.name);
+
+        if (stockError && stockError.code !== '23505') {
+          console.error('Error syncing product stock:', stockError);
+        } else {
+          const upsertStockData = {
+            id: existingStock?.[0]?.id || product.productstock.id, // Assuming using name as unique ID
+            name: product.productstock.name,
+            price: product.productstock.price,
+            stock: product.productstock.stock,
+            cat: product.productstock.cat,
+          };
+
+          const { error: upsertStockError } = await supabase
+            .from('product_stocks')
+            .upsert(upsertStockData)
+            .select();
+
+          if (upsertStockError) {
+            console.error('Error syncing product stock:', upsertStockError);
+          } else {
+            console.log(`Successfully synced product stock: ${product.productstock.name}`);
+          }
+        }
+      }
+
+      // Upsert OnSaleProduct records for this product
+      for (const sale of product.OnSaleProduct) {
+        const { data: existingSale, error: saleError } = await supabase
+          .from('on_sale_products')
+          .select()
+          .eq('product_id', sale.productId)
+          .eq('transaction_id', sale.transaction.id);
+
+        if (saleError && saleError.code !== '23505') {
+          console.error('Error syncing sale data:', saleError);
+        } else {
+          const upsertSaleData = {
+            id: existingSale?.[0]?.id || `${sale.productId}-${sale.transaction.id}`,
+            product_id: sale.productId,
+            quantity: sale.quantity,
+            saledate: sale.saledate,
+            transaction_id: sale.transaction.id,
+          };
+
+          const { error: upsertSaleError } = await supabase
+            .from('on_sale_products')
+            .upsert(upsertSaleData)
+            .select();
+
+          if (upsertSaleError) {
+            console.error('Error syncing sale data for product:', upsertSaleError);
+          } else {
+            console.log(`Successfully synced sale data for product: ${product.productId}`);
+          }
+        }
+      }
+    }
+
+
     // Step 4: Sync OnSaleProduct data
     for (const product of products) {
       // Sync OnSaleProduct data for each product
@@ -193,6 +288,36 @@ export async function syncAllDataToSupabase() {
           } else {
             console.log(`Successfully synced sale data for product: ${product.productId}`);
           }
+        }
+      }
+    }
+
+    // Step 5: Sync Shop Data
+    const shopData = await db.shopData.findFirst();
+    if (shopData) {
+      const { data: existingShopData, error: shopDataError } = await supabase
+        .from('shop_data')
+        .select()
+        .eq('name', shopData.name);
+
+      if (shopDataError && shopDataError.code !== '23505') {
+        console.error('Error syncing shop data:', shopDataError);
+      } else {
+        const upsertShopData = {
+          id: existingShopData?.[0]?.id || shopData.name,
+          tax: shopData.tax,
+          name: shopData.name,
+        };
+
+        const { error: upsertShopDataError } = await supabase
+          .from('shop_data')
+          .upsert(upsertShopData)
+          .select();
+
+        if (upsertShopDataError) {
+          console.error('Error syncing shop data:', upsertShopDataError);
+        } else {
+          console.log(`Successfully synced shop data: ${shopData.name}`);
         }
       }
     }
