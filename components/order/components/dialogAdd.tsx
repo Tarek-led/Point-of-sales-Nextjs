@@ -138,7 +138,13 @@ export function DialogAdd({
           ...prevError,
           ...fieldErrors,
         }));
-      } else {
+      } else if (axios.isAxiosError(error)) {
+        // Grabs the error message from the response
+        const errorMessage = error.response?.data?.error || 'An error occurred while placing the order.';
+        toast.error(errorMessage);
+      }
+      
+      else {
         console.error(error);
         // Handle other types of errors here
       }
