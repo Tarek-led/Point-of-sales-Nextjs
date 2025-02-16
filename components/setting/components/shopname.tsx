@@ -16,6 +16,7 @@ import { shopnameSchema } from '@/schema';
 import { ZodError } from 'zod';
 import { ReloadIcon } from '@radix-ui/react-icons';
 import eventBus from '@/lib/even';
+
 interface ShopnameCardProps {
   storeName: string | null;
   storeId: string | null;
@@ -34,19 +35,9 @@ const ShopnameCard: React.FC<ShopnameCardProps> = ({ storeName, storeId }) => {
   };
 
   const handleSave = async () => {
-    // Check if the user is online
-    const isOnline = navigator.onLine;
+    // Remove online check since this is offline-first
 
-    if (!isOnline) {
-      toast.error('You are offline. Please check your internet connection.');
-      return;
-    }
-
-    if (!storeId) {
-      toast.error('Store ID is required to save the store name.');
-      return;
-    }
-
+    // If no changes were made, exit early
     if (editableStoreName === storeName) {
       toast.info('No changes to save.');
       return;
@@ -59,13 +50,19 @@ const ShopnameCard: React.FC<ShopnameCardProps> = ({ storeName, storeId }) => {
         storeName: editableStoreName,
       });
 
-      await axios.patch(`/api/shopdata/${storeId}`, validatedData);
-
-      toast.success('Store name updated successfully.');
+      if (!storeId) {
+        // If there is no storeId, create a new shop record.
+        const { data } = await axios.post(`/api/shopdata`, validatedData);
+        // Optionally, you might want to update your app's storeId here.
+        toast.success('Store created successfully.');
+      } else {
+        // If storeId exists, update the existing record.
+        await axios.patch(`/api/shopdata/${storeId}`, validatedData);
+        toast.success('Store name updated successfully.');
+      }
       eventBus.emit('fetchStoreData');
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof ZodError) {
-        // Handle ZodError
         const fieldErrors = error.errors.map((err) => err.message);
         toast.error(`${fieldErrors.join(', ')}`);
       } else {
@@ -88,11 +85,7 @@ const ShopnameCard: React.FC<ShopnameCardProps> = ({ storeName, storeId }) => {
         </form>
       </CardContent>
       <CardFooter className="border-t px-6 py-4">
-        <Button
-          className="text-white"
-          onClick={handleSave}
-          disabled={isLoading}
-        >
+        <Button className="text-white" onClick={handleSave} disabled={isLoading}>
           {isLoading ? (
             <>
               <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
