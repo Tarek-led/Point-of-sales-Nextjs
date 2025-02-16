@@ -1,9 +1,162 @@
 import { db } from '@/lib/db'; // Prisma client
 import { supabase } from '@/lib/supabase'; // Supabase client
 
+/**
+ * Checks if the local database is empty. If yes, perform an initial pull from Supabase;
+ * otherwise, sync local changes to Supabase.
+ */
+export async function performInitialSync() {
+  // Check critical tables – adjust these if needed
+  const localTransactionsCount = await db.transaction.count();
+  const localProductsCount = await db.product.count();
+
+  const isFirstSync = localTransactionsCount === 0 && localProductsCount === 0;
+
+  if (isFirstSync) {
+    console.log('Initial sync detected: pulling data from Supabase...');
+    await pullAllDataFromSupabase();
+  } else {
+    console.log('Existing local data detected: syncing local changes to Supabase...');
+    await syncAllDataToSupabase();
+  }
+}
+
+/**
+ * Pulls all data from Supabase and inserts it into the local database.
+ * This function is intended for the initial sync when the local DB is empty.
+ */
+export async function pullAllDataFromSupabase() {
+  try {
+    // --- Pull Transactions ---
+    const { data: supabaseTransactions, error: transactionError } = await supabase
+      .from('transactions')
+      .select('*');
+
+    if (transactionError) {
+      console.error('Error fetching transactions from Supabase:', transactionError);
+    } else if (supabaseTransactions) {
+      for (const transaction of supabaseTransactions) {
+        await db.transaction.create({
+          data: {
+            id: transaction.id,
+            totalAmount: transaction.total_amount,
+            createdAt: new Date(transaction.created_at), // Convert to Date
+            isComplete: transaction.is_complete,
+          },
+        });
+        console.log(`Pulled transaction: ${transaction.id}`);
+      }
+    }
+
+    // --- Pull Product Stocks ---
+    // Pulling product stocks first so that products can later connect to them.
+    const { data: supabaseStocks, error: stockError } = await supabase
+      .from('product_stocks')
+      .select('*');
+
+    if (stockError) {
+      console.error('Error fetching product stocks from Supabase:', stockError);
+    } else if (supabaseStocks) {
+      for (const stock of supabaseStocks) {
+        await db.productStock.create({
+          data: {
+            id: stock.id,
+            name: stock.name,
+            price: stock.price,
+            stock: stock.stock,
+            cat: stock.cat,
+          },
+        });
+        console.log(`Pulled product stock: ${stock.name}`);
+      }
+    }
+
+    // --- Pull Products ---
+    // Now that product stocks exist, create products and connect them to their stock.
+    const { data: supabaseProducts, error: productError } = await supabase
+      .from('products')
+      .select('*');
+
+    if (productError) {
+      console.error('Error fetching products from Supabase:', productError);
+    } else if (supabaseProducts) {
+      for (const product of supabaseProducts) {
+        await db.product.create({
+          data: {
+            id: product.product_id,
+            sellprice: product.sellprice,
+            createdAt: new Date(product.created_at), // Convert to Date
+            // Connect the product to its product stock using the same id.
+            productstock: {
+              connect: { id: product.product_id },
+            },
+          },
+        });
+        console.log(`Pulled product: ${product.product_id}`);
+      }
+    }
+
+    // --- Pull On-Sale Products ---
+    const { data: supabaseSales, error: saleError } = await supabase
+      .from('on_sale_products')
+      .select('*');
+
+    if (saleError) {
+      console.error('Error fetching on_sale_products from Supabase:', saleError);
+    } else if (supabaseSales) {
+      for (const sale of supabaseSales) {
+        await db.onSaleProduct.create({
+          data: {
+            id: sale.id,
+            productId: sale.product_id,
+            quantity: sale.quantity,
+            saledate: sale.saledate, // Adjust if necessary (e.g. new Date(sale.saledate))
+            transactionId: sale.transaction_id,
+          },
+        });
+        console.log(`Pulled on_sale_product: ${sale.id}`);
+      }
+    }
+
+    // --- Pull Shop Data ---
+    const { data: supabaseShopData, error: shopDataError } = await supabase
+      .from('shop_data')
+      .select('*')
+      .single();
+
+    if (shopDataError) {
+      console.error('Error fetching shop data from Supabase:', shopDataError);
+    } else if (supabaseShopData) {
+      // Use upsert to avoid unique constraint errors if shop data already exists
+      await db.shopData.upsert({
+        where: { id: supabaseShopData.id },
+        update: {
+          name: supabaseShopData.name,
+          tax: supabaseShopData.tax,
+        },
+        create: {
+          id: supabaseShopData.id,
+          name: supabaseShopData.name,
+          tax: supabaseShopData.tax,
+        },
+      });
+      console.log(`Pulled shop data: ${supabaseShopData.name}`);
+    }
+
+    console.log('Initial data pull complete.');
+  } catch (error) {
+    console.error('Error pulling data from Supabase:', error);
+  }
+}
+
+/**
+ * Syncs local data to Supabase.
+ * This is your existing logic for pushing local changes and handling deletions.
+ */
 export async function syncAllDataToSupabase() {
   try {
-    // Step 1: Sync transactions table first
+    // (Your existing sync logic remains unchanged.)
+    // Step 1: Sync transactions, etc.
     const transactions = await db.transaction.findMany({
       include: {
         products: true, // Include the products sold in each transaction
@@ -105,7 +258,7 @@ export async function syncAllDataToSupabase() {
           const { error: deleteProductStockError } = await supabase
             .from('product_stocks')
             .delete()
-            .eq('id', supabaseProduct.product_id); // Use `id` which is same as `product_id`
+            .eq('id', supabaseProduct.product_id);
 
           if (deleteProductStockError) {
             console.error('Error deleting product stock from Supabase:', deleteProductStockError);
@@ -181,7 +334,7 @@ export async function syncAllDataToSupabase() {
           console.error('Error syncing product stock:', stockError);
         } else {
           const upsertStockData = {
-            id: existingStock?.[0]?.id || product.productstock.id, // Assuming using name as unique ID
+            id: existingStock?.[0]?.id || product.productstock.id,
             name: product.productstock.name,
             price: product.productstock.price,
             stock: product.productstock.stock,
@@ -234,10 +387,8 @@ export async function syncAllDataToSupabase() {
       }
     }
 
-
     // Step 4: Sync OnSaleProduct data
     for (const product of products) {
-      // Sync OnSaleProduct data for each product
       for (const sale of product.OnSaleProduct) {
         // Ensure the corresponding transaction exists in Supabase
         const { data: existingTransaction, error: transactionError } = await supabase
@@ -271,11 +422,11 @@ export async function syncAllDataToSupabase() {
           console.error('Error syncing sale data:', saleError);
         } else {
           const upsertSaleData = {
-            id: existingSale?.[0]?.id || sale.productId + '-' + sale.transaction.id, // Create a unique ID based on productId and transaction.id
+            id: existingSale?.[0]?.id || sale.productId + '-' + sale.transaction.id,
             product_id: sale.productId,
             quantity: sale.quantity,
             saledate: sale.saledate,
-            transaction_id: sale.transaction.id, // Use transaction.id directly as a string
+            transaction_id: sale.transaction.id,
           };
 
           const { error: upsertSaleError } = await supabase
