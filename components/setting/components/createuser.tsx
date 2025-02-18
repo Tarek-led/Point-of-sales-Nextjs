@@ -111,7 +111,7 @@ const CreateUser: React.FC = () => {
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as 'user' | 'admin')}
-                className="border rounded-md p-3 w-full mt-2"
+                className="border rounded-md p-3 w-full mt-2 bg-white dark:bg-cardDarker"
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
