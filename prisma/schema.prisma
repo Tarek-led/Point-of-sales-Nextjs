@@ -24,7 +24,8 @@ model ProductStock {
   imageProduct String?
   price        Float
   stock        Float
-  cat          String
+  categoryId   String
+  category     Category   @relation(fields: [categoryId], references: [id])
 
   Product Product[] // Relation to Product
 }
@@ -64,4 +65,10 @@ model ShopData {
   id    String @id // Use String for ShopData id
   tax   Int?
   name  String?
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+  ProductStock ProductStock[] // Relation to ProductStock
 }

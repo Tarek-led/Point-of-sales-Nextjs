@@ -7,6 +7,7 @@ import TaxrateCard from './components/taxrate';
 import CreateUser from './components/createuser'; // Import the CreateUser component
 import eventBus from '@/lib/even';
 import { Button } from '../ui/button'; // Replace with the actual path to your Button component
+import { Input } from '@/components/ui/input'; // Add input for adding categories
 
 export function Setting() {
   const [storeName, setStoreName] = useState<string | null>(null);
@@ -14,6 +15,8 @@ export function Setting() {
   const [taxRate, setTaxRate] = useState<number>(0);
   const [isAdmin, setIsAdmin] = useState(false); // Track if the user is admin
   const [users, setUsers] = useState<any[]>([]); // List of users
+  const [categories, setCategories] = useState<any[]>([]); // List of categories (updated to hold objects)
+  const [newCategory, setNewCategory] = useState(''); // For adding new categories
   const [isUsersDropdownOpen, setIsUsersDropdownOpen] = useState(false); // For toggling the dropdown
 
   useEffect(() => {
@@ -66,12 +69,26 @@ export function Setting() {
       }
     };
 
+    // Fetch list of categories for the admin
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('/api/categories');
+        if (response.status === 200) {
+          setCategories(response.data.categories); // Assume response contains objects with id and name
+        }
+      } catch (error) {
+        toast.error('Failed to load categories.');
+      }
+    };
+
     fetchShopData();
     fetchCurrentUser();
     fetchUsers();
+    fetchCategories();
 
     const handleEventBusEvent = () => {
       fetchShopData();
+      fetchCategories(); // Refresh categories list
     };
 
     eventBus.on('fetchStoreData', handleEventBusEvent);
@@ -84,6 +101,47 @@ export function Setting() {
   // Toggle the dropdown visibility
   const toggleDropdown = () => {
     setIsUsersDropdownOpen((prev) => !prev);
+  };
+
+  // Handle adding new category
+  const handleAddCategory = async () => {
+    if (!newCategory) {
+      toast.error('Please enter a category name.');
+      return;
+    }
+
+    try {
+      const response = await axios.post('/api/categories', { name: newCategory });
+      if (response.status === 200) {
+        const addedCategory = response.data.category; // Get the newly added category object
+        setCategories((prevCategories) => [...prevCategories, addedCategory]); // Add new category object
+        setNewCategory('');
+        toast.success('Category added successfully.');
+      } else {
+        toast.error('Error adding category.');
+      }
+    } catch (error) {
+      toast.error('Failed to add category.');
+    }
+  };
+
+  // Handle deleting category
+  const handleDeleteCategory = async (categoryId: string) => {
+    console.log('Deleting category with ID:', categoryId); // Add this line for debugging
+    try {
+      const response = await axios.delete(`/api/categories/${categoryId}`); // Send category ID in the URL
+      if (response.status === 200) {
+        setCategories((prevCategories) =>
+          prevCategories.filter((cat) => cat.id !== categoryId) // Remove the category by ID
+        );
+        toast.success('Category deleted successfully.');
+      } else {
+        toast.error('Error deleting category.');
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error); // Add this line for debugging
+      toast.error('Failed to delete category.');
+    }
   };
 
   return (
@@ -127,6 +185,41 @@ export function Setting() {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Category Management */}
+            {isAdmin && (
+              <div className="mt-6">
+                <h3 className="text-xl font-semibold mb-4">Manage Categories</h3>
+
+                {/* Category input and add button */}
+                <div className="flex gap-2 mb-4">
+                  <Input
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder="New category"
+                    className="flex-grow"
+                  />
+                  <Button onClick={handleAddCategory} className="bg-green-500 text-white">
+                    Add Category
+                  </Button>
+                </div>
+
+                {/* List of categories */}
+                <ul className="space-y-2">
+                  {categories.map((category) => (
+                    <li key={category.id} className="flex justify-between items-center p-2 bg-white text-gray-800 dark:bg-gray-700 dark:text-white rounded-md hover:bg-gray-100 dark:hover:bg-gray-600">
+                      <span>{category.name}</span>
+                      <Button
+                        onClick={() => handleDeleteCategory(category.id)} // Pass category id for deletion
+                        className="bg-red-500 text-white text-xs"
+                      >
+                        Delete
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
