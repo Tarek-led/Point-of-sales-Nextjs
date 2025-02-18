@@ -26,7 +26,11 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 
-const CatProduct = ["ELECTRO", "DRINK", "FOOD", "FASHION"];
+// Type for Category (assuming category has id and name)
+type Category = {
+  id: string;
+  name: string;
+};
 
 type Data = {
   id: string;
@@ -50,29 +54,35 @@ export function SheetEdit({
   data: Data;
 }) {
   const [productName, setProductName] = useState(data.productstock.name || '');
-  const [categoryProduct, setCategories] = useState<string>(
-    data.productstock.cat ?? ''
-  );
+  const [categoryProduct, setCategories] = useState<string>(data.productstock.cat ?? '');
   const [sellPrice, setSellPrice] = useState(data.sellprice || '');
   const [buyPrice, setBuyPrice] = useState(data.productstock.price || '');
-  const [stockProduct, setStockProduct] = useState(
-    data.productstock.stock || ''
-  );
-  const [searchTerm, setSearchTerm] = useState<string>(
-    data.productstock.cat ?? ''
-  );
+  const [stockProduct, setStockProduct] = useState(data.productstock.stock || '');
+  const [searchTerm, setSearchTerm] = useState<string>(data.productstock.cat ?? '');
   const [error, setError] = useState<{ [key: string]: string }>({});
+  const [categories, setCategoriesList] = useState<Category[]>([]); // Categories list
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const buyPriceNumber = parseFloat(String(buyPrice)) || 0;
   const stockProductNumber = parseFloat(String(stockProduct)) || 0;
   const sellPriceNumber = parseFloat(String(sellPrice)) || 0;
 
-  const catProductValues = CatProduct;
-  const filteredCatProducts = catProductValues.filter((product) =>
-    product.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  // Fetch categories dynamically from the API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('/api/categories'); // Fetch categories from your API
+        if (response.status === 200) {
+          setCategoriesList(response.data.categories); // Assuming the response contains categories
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -84,14 +94,7 @@ export function SheetEdit({
       setBuyPrice(data.productstock.price || '');
       setCategories(data.productstock.cat ?? '');
     }
-  }, [
-    open,
-    data.productstock.name,
-    data.sellprice,
-    data.productstock.stock,
-    data.productstock.cat,
-    data.productstock.price,
-  ]);
+  }, [open, data]);
 
   const handleCancel = () => {
     onClose();
@@ -155,6 +158,10 @@ export function SheetEdit({
       setLoading(false);
     }
   };
+
+  const filteredCategories = categories.filter((category) =>
+    category.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <Sheet open={open}>
@@ -261,12 +268,7 @@ export function SheetEdit({
               <SelectTrigger id="categoryProduct" className="min-w-max">
                 <SelectValue
                   className="pr-20"
-                  placeholder={
-                    searchTerm
-                      ? searchTerm.charAt(0).toUpperCase() +
-                        searchTerm.slice(1).toLowerCase()
-                      : 'Select Category'
-                  }
+                  placeholder={searchTerm ? searchTerm : 'Select Category'}
                   onClick={() => setSearchTerm('')}
                 />
               </SelectTrigger>
@@ -278,18 +280,15 @@ export function SheetEdit({
               <SelectContent position="popper">
                 <input
                   type="text"
-                  value={
-                    searchTerm.charAt(0).toUpperCase() +
-                    searchTerm.slice(1).toLowerCase()
-                  }
+                  value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search Category"
                   style={{ padding: '5px', margin: '5px 0', width: '100%' }}
                 />
-                {filteredCatProducts.map((product) => (
-                  <SelectItem key={product} value={product}>
-                    {product.charAt(0).toUpperCase() +
-                      product.slice(1).toLowerCase()}
+                {filteredCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name.charAt(0).toUpperCase() +
+                      category.name.slice(1).toLowerCase()}
                   </SelectItem>
                 ))}
               </SelectContent>

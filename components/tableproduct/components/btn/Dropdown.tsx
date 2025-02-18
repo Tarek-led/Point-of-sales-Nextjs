@@ -12,9 +12,6 @@ import { useState } from "react";
 import { DeleteAlertDialog } from "./alertDelete";
 import { SheetEdit } from "./sheetEdit";
 
-// Manually define categories since SQLite does not support enums
-const CatProduct = ["ELECTRO", "DRINK", "FOOD", "FASHION"];
-
 // Fix Product type
 type Product = {
   id: string;
@@ -22,7 +19,7 @@ type Product = {
   productstock: {
     id: string;
     name: string;
-    cat: string; // ✅ Change from CatProduct to string
+    cat: string;
     stock: number;
     price: number;
   };

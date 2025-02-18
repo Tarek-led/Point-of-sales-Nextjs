@@ -26,7 +26,6 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 
-const CatProduct = ["ELECTRO", "DRINK", "FOOD", "FASHION"];
 export function SheetAdd({
   open,
   onClose,
@@ -44,12 +43,13 @@ export function SheetAdd({
   const buyPriceNumber = parseFloat(buyPrice) || 0;
   const stockProductNumber = parseFloat(stockProduct) || 0;
   const sellPriceNumber = parseFloat(sellPrice) || 0;
-  const catProductValues = ["ELECTRO", "DRINK", "FOOD", "FASHION"];
-  const filteredCatProducts = catProductValues.filter((product) =>
-    product.toLowerCase().includes(searchTerm.toLowerCase())
+  const [categories, setCategoriesList] = useState<{ id: string; name: string }[]>([]); // Categories list
+  const filteredCategories = categories.filter((category) =>
+    category.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
   useEffect(() => {
     if (!open) {
       // Reset input value when sheet is closed
@@ -61,6 +61,23 @@ export function SheetAdd({
       setCategories('');
     }
   }, [open]);
+
+  // Fetch categories from the API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get('/api/categories'); // Fetch categories from your API
+        if (response.status === 200) {
+          setCategoriesList(response.data.categories); // Assuming the response contains categories
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   const handleCancel = () => {
     onClose();
     setError({});
@@ -68,27 +85,56 @@ export function SheetAdd({
 
   const handleAdd = async () => {
     setLoading(true);
-    // Check if the user is online
-    const isOnline = navigator.onLine;
-
-    if (!isOnline) {
-      toast.error('You are offline. Please check your internet connection.');
+  
+  
+    // Fetch categories to validate category input dynamically
+    let categories: { id: string; name: string }[] = [];
+    try {
+      const response = await axios.get('/api/categories'); // Assuming this endpoint returns categories in { id, name } format
+      categories = response.data.categories; // Store fetched categories
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Error fetching categories.');
       setLoading(false);
       return;
     }
-
+  
+    // Ensure the selected category exists in the fetched categories
+    const categoryExists = categories.some(
+      (category) => category.name === categoryProduct
+    );
+  
+    if (!categoryExists) {
+      toast.error('Invalid category selected.');
+      setLoading(false);
+      return;
+    }
+  
+    // Find the category ID from the selected category name
+    const selectedCategory = categories.find(
+      (category) => category.name === categoryProduct
+    );
+  
+    // Ensure category exists in the database and get its ID
+    if (!selectedCategory) {
+      toast.error('Category not found in the database.');
+      setLoading(false);
+      return;
+    }
+  
+    // Use the categoryId (not name) to create the product
     try {
       const validatedData = productSchema.parse({
         productName: productName,
         buyPrice: buyPriceNumber,
         sellPrice: sellPriceNumber,
         stockProduct: stockProductNumber,
-        category: categoryProduct,
+        category: selectedCategory.id, // Use categoryId here
       });
-
+  
       // Send validated data using axios
       const response = await axios.post('/api/product', validatedData);
-
+  
       // If no errors, close the dialog and refresh the page
       onClose();
       router.refresh();
@@ -105,13 +151,13 @@ export function SheetAdd({
         }));
       } else {
         console.error(error);
-        // Handle other types of errors here
         toast.error('An error occurred. Please try again later.');
       }
     } finally {
       setLoading(false);
     }
   };
+  
 
   return (
     <Sheet open={open}>
@@ -233,18 +279,15 @@ export function SheetAdd({
               <SelectContent position="popper">
                 <input
                   type="text"
-                  value={
-                    searchTerm.charAt(0).toUpperCase() +
-                    searchTerm.slice(1).toLowerCase()
-                  }
+                  value={searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1).toLowerCase()}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search Category"
                   style={{ padding: '5px', margin: '5px 0', width: '100%' }}
                 />
-                {filteredCatProducts.map((product) => (
-                  <SelectItem key={product} value={product}>
-                    {product.charAt(0).toUpperCase() +
-                      product.slice(1).toLowerCase()}
+                {filteredCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name.charAt(0).toUpperCase() +
+                      category.name.slice(1).toLowerCase()}
                   </SelectItem>
                 ))}
               </SelectContent>

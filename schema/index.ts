@@ -1,21 +1,13 @@
 import * as z from 'zod';
 
-// Define Category Options Manually
-const categoryOptions = ["ELECTRO", "DRINK", "FOOD", "FASHION"] as const;
-
-const categoryValidator = (val: string): val is (typeof categoryOptions)[number] =>
-  categoryOptions.includes(val as (typeof categoryOptions)[number]);
-
+// Define the product schema
 export const productSchema = z
   .object({
     productName: z.string().min(2, 'Product name must be at least 2 characters'),
     buyPrice: z.number().positive('Buy price must be a positive number').min(0.05),
     sellPrice: z.number().positive('Sell price must be a positive number').min(0.01),
     stockProduct: z.number().positive('Stock must be a positive number').min(1),
-    category: z.string().min(1, 'Category cannot be empty').refine(categoryValidator, {
-      message: 'Select a valid category',
-      params: { validValues: categoryOptions.join(', ') },
-    }),
+    category: z.string().min(1, 'Category cannot be empty'), // We will handle category validation in the frontend
   })
   .refine((data) => data.sellPrice > data.buyPrice, {
     message: 'Sell price must be greater than buy price',
