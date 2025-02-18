@@ -102,24 +102,28 @@ export function Setting() {
                 {/* Dropdown Button */}
                 <Button
                   onClick={toggleDropdown}
-                  className="text-white bg-blue-500 hover:bg-blue-600 rounded-md py-2 px-4"
+                  className="w-full py-2 text-white bg-primary hover:bg-primary/80 rounded-md text-left flex justify-between items-center"
                 >
                   {isUsersDropdownOpen ? 'Hide Users' : 'Show Users'}
+                  {/* Dropdown Arrow */}
+                  <span className={`ml-2 transform ${isUsersDropdownOpen ? 'rotate-180' : ''}`}>
+                    ▼
+                  </span>
                 </Button>
                 {/* Dropdown Content */}
                 {isUsersDropdownOpen && (
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-4 space-y-2 rounded-md shadow-md bg-white dark:bg-card p-4">
                     {users.length > 0 ? (
                       users.map((user) => (
                         <div
                           key={user.id}
-                          className="flex justify-between items-center p-4 bg-gray-800 text-white shadow-lg rounded-lg hover:bg-gray-700 transition duration-200"
+                          className="flex justify-between items-center p-4 bg-gray-100 text-gray-800 dark:bg-cardDarker dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition duration-200"
                         >
                           <span>{user.username} ({user.role})</span>
                         </div>
                       ))
                     ) : (
-                      <p className="text-gray-400">No users found.</p>
+                      <p className="text-gray-500 dark:text-gray-300">No users found.</p>
                     )}
                   </div>
                 )}
