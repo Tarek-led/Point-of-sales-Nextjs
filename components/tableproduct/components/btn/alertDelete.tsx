@@ -39,14 +39,6 @@ export function DeleteAlertDialog({
 
   const handleDelete = async () => {
     setLoading(true);
-    // Check if the user is online
-    const isOnline = navigator.onLine;
-
-    if (!isOnline) {
-      toast.error('You are offline. Please check your internet connection.');
-      setLoading(false);
-      return;
-    }
 
     try {
       const response = await axios.delete(

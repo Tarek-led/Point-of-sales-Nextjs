@@ -58,7 +58,7 @@ export function SheetEdit({
   const [sellPrice, setSellPrice] = useState(data.sellprice || '');
   const [buyPrice, setBuyPrice] = useState(data.productstock.price || '');
   const [stockProduct, setStockProduct] = useState(data.productstock.stock || '');
-  const [searchTerm, setSearchTerm] = useState<string>(data.productstock.cat ?? '');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [error, setError] = useState<{ [key: string]: string }>({});
   const [categories, setCategoriesList] = useState<Category[]>([]); // Categories list
   const [loading, setLoading] = useState(false);
@@ -104,14 +104,6 @@ export function SheetEdit({
   const handleEdit = async () => {
     setLoading(true);
 
-    // Check if the user is online
-    const isOnline = navigator.onLine;
-
-    if (!isOnline) {
-      toast.error('You are offline. Please check your internet connection.');
-      setLoading(false);
-      return;
-    }
 
     // Check if any changes were made
     if (
