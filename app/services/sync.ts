@@ -184,11 +184,25 @@ export async function pullAllDataFromSupabase() {
  */
 export async function syncAllDataToSupabase() {
   try {
+    // --- Sync Users ---
+    const users = await db.user.findMany();
+    for (const user of users) {
+      await supabase.from('users').upsert([
+        {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          password: user.password,
+          image: user.image,
+        },
+      ]);
+      console.log(`Synced user: ${user.username}`);
+    }
     // --- Delete Users from Supabase ---
     const localUsers = await db.user.findMany();
     const userIds = localUsers.map((user) => user.id);
-
-    // Fetch all users from Supabase
     const { data: supabaseUsers, error: supabaseUserError } = await supabase
       .from('users')
       .select('id');
@@ -196,7 +210,6 @@ export async function syncAllDataToSupabase() {
     if (supabaseUserError) {
       console.error('Error fetching users from Supabase:', supabaseUserError);
     } else {
-      // Delete users from Supabase that no longer exist locally
       for (const supabaseUser of supabaseUsers) {
         if (!userIds.includes(supabaseUser.id)) {
           const { error: deleteUserError } = await supabase
@@ -213,12 +226,16 @@ export async function syncAllDataToSupabase() {
       }
     }
 
+    // --- Sync Categories ---
+    const categories = await db.category.findMany();
+    for (const category of categories) {
+      await supabase.from('categories').upsert([{ id: category.id, name: category.name }]);
+      console.log(`Synced category: ${category.name}`);
+    }
 
     // --- Delete Categories from Supabase ---
     const localCategories = await db.category.findMany();
     const categoryIds = localCategories.map((category) => category.id);
-
-    // Fetch all categories from Supabase
     const { data: supabaseCategories, error: supabaseCategoryError } = await supabase
       .from('categories')
       .select('id');
@@ -226,7 +243,6 @@ export async function syncAllDataToSupabase() {
     if (supabaseCategoryError) {
       console.error('Error fetching categories from Supabase:', supabaseCategoryError);
     } else {
-      // Delete categories from Supabase that no longer exist locally
       for (const supabaseCategory of supabaseCategories) {
         if (!categoryIds.includes(supabaseCategory.id)) {
           const { error: deleteCategoryError } = await supabase
@@ -242,7 +258,6 @@ export async function syncAllDataToSupabase() {
         }
       }
     }
-
 
     // Step 1: Sync transactions, etc.
     const transactions = await db.transaction.findMany({
