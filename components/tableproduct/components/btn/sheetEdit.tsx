@@ -54,7 +54,7 @@ export function SheetEdit({
   data: Data;
 }) {
   const [productName, setProductName] = useState(data.productstock.name || '');
-  const [categoryProduct, setCategories] = useState<string>(data.productstock.cat ?? '');
+  const [categoryProduct, setCategoryProduct] = useState<string>(data.productstock.cat ?? '');
   const [sellPrice, setSellPrice] = useState(data.sellprice || '');
   const [buyPrice, setBuyPrice] = useState(data.productstock.price || '');
   const [stockProduct, setStockProduct] = useState(data.productstock.stock || '');
@@ -87,12 +87,12 @@ export function SheetEdit({
   useEffect(() => {
     if (!open) {
       // Reset input value when sheet is closed
-      setSearchTerm(data.productstock.cat ?? '');
+      setSearchTerm('');
       setProductName(data.productstock.name || '');
       setSellPrice(data.sellprice || '');
       setStockProduct(data.productstock.stock || '');
       setBuyPrice(data.productstock.price || '');
-      setCategories(data.productstock.cat ?? '');
+      setCategoryProduct(data.productstock.cat ?? '');
     }
   }, [open, data]);
 
@@ -103,7 +103,6 @@ export function SheetEdit({
 
   const handleEdit = async () => {
     setLoading(true);
-
 
     // Check if any changes were made
     if (
@@ -125,7 +124,7 @@ export function SheetEdit({
         buyPrice: buyPriceNumber,
         sellPrice: sellPriceNumber,
         stockProduct: stockProductNumber,
-        category: categoryProduct,
+        category: categoryProduct, // Send the category id here
       });
 
       // Send validated data using axios
@@ -250,7 +249,7 @@ export function SheetEdit({
             <Select
               value={categoryProduct}
               onValueChange={(newValue) => {
-                setCategories(newValue);
+                setCategoryProduct(newValue); // Now store category id
                 setError((prevError) => ({
                   ...prevError,
                   category: '',
@@ -278,7 +277,7 @@ export function SheetEdit({
                   style={{ padding: '5px', margin: '5px 0', width: '100%' }}
                 />
                 {filteredCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.name}>
+                  <SelectItem key={category.id} value={category.id}> {/* Use category id as value */}
                     {category.name.charAt(0).toUpperCase() +
                       category.name.slice(1).toLowerCase()}
                   </SelectItem>
