@@ -27,6 +27,35 @@ export async function performInitialSync() {
  */
 export async function pullAllDataFromSupabase() {
   try {
+
+    // --- Pull Users ---
+    const { data: supabaseUsers, error: userError } = await supabase.from('users').select('*');
+    if (userError) console.error('Error fetching users:', userError);
+    else {
+      for (const user of supabaseUsers) {
+        await db.user.upsert({
+          where: { id: user.id },
+          update: { name: user.name, username: user.username, email: user.email, password: user.password, role: user.role, image: user.image },
+          create: { id: user.id, name: user.name, username: user.username, email: user.email, password: user.password, role: user.role, image: user.image },
+        });
+        console.log(`Pulled user: ${user.username}`);
+      }
+    }
+
+    // --- Pull Categories ---
+    const { data: supabaseCategories, error: categoryError } = await supabase.from('categories').select('*');
+    if (categoryError) console.error('Error fetching categories:', categoryError);
+    else {
+      for (const category of supabaseCategories) {
+        await db.category.upsert({
+          where: { id: category.id },
+          update: { name: category.name },
+          create: { id: category.id, name: category.name },
+        });
+        console.log(`Pulled category: ${category.name}`);
+      }
+    }
+
     // --- Pull Transactions ---
     const { data: supabaseTransactions, error: transactionError } = await supabase
       .from('transactions')
@@ -155,7 +184,66 @@ export async function pullAllDataFromSupabase() {
  */
 export async function syncAllDataToSupabase() {
   try {
-    // (Your existing sync logic remains unchanged.)
+    // --- Delete Users from Supabase ---
+    const localUsers = await db.user.findMany();
+    const userIds = localUsers.map((user) => user.id);
+
+    // Fetch all users from Supabase
+    const { data: supabaseUsers, error: supabaseUserError } = await supabase
+      .from('users')
+      .select('id');
+
+    if (supabaseUserError) {
+      console.error('Error fetching users from Supabase:', supabaseUserError);
+    } else {
+      // Delete users from Supabase that no longer exist locally
+      for (const supabaseUser of supabaseUsers) {
+        if (!userIds.includes(supabaseUser.id)) {
+          const { error: deleteUserError } = await supabase
+            .from('users')
+            .delete()
+            .eq('id', supabaseUser.id);
+
+          if (deleteUserError) {
+            console.error('Error deleting user from Supabase:', deleteUserError);
+          } else {
+            console.log(`Successfully deleted user: ${supabaseUser.id}`);
+          }
+        }
+      }
+    }
+
+
+    // --- Delete Categories from Supabase ---
+    const localCategories = await db.category.findMany();
+    const categoryIds = localCategories.map((category) => category.id);
+
+    // Fetch all categories from Supabase
+    const { data: supabaseCategories, error: supabaseCategoryError } = await supabase
+      .from('categories')
+      .select('id');
+
+    if (supabaseCategoryError) {
+      console.error('Error fetching categories from Supabase:', supabaseCategoryError);
+    } else {
+      // Delete categories from Supabase that no longer exist locally
+      for (const supabaseCategory of supabaseCategories) {
+        if (!categoryIds.includes(supabaseCategory.id)) {
+          const { error: deleteCategoryError } = await supabase
+            .from('categories')
+            .delete()
+            .eq('id', supabaseCategory.id);
+
+          if (deleteCategoryError) {
+            console.error('Error deleting category from Supabase:', deleteCategoryError);
+          } else {
+            console.log(`Successfully deleted category: ${supabaseCategory.id}`);
+          }
+        }
+      }
+    }
+
+
     // Step 1: Sync transactions, etc.
     const transactions = await db.transaction.findMany({
       include: {

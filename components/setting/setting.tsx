@@ -144,6 +144,22 @@ export function Setting() {
     }
   };
 
+  // Handle deleting user
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const response = await axios.delete(`/api/users/${userId}`); // Send user ID in the URL
+      if (response.status === 200) {
+        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId)); // Remove user by ID
+        toast.success('User deleted successfully.');
+      } else {
+        toast.error('Error deleting user.');
+      }
+    } catch (error) {
+      toast.error('Failed to delete user.');
+    }
+  };
+  
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
@@ -178,6 +194,12 @@ export function Setting() {
                           className="flex justify-between items-center p-4 bg-gray-100 text-gray-800 dark:bg-cardDarker dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition duration-200"
                         >
                           <span>{user.username} ({user.role})</span>
+                          <Button
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="bg-red-500 text-white text-xs"
+                          >
+                            Delete
+                          </Button>
                         </div>
                       ))
                     ) : (
@@ -206,20 +228,30 @@ export function Setting() {
                   </Button>
                 </div>
 
-                {/* List of categories */}
-                <ul className="space-y-2">
-                  {categories.map((category) => (
-                    <li key={category.id} className="flex justify-between items-center p-2 bg-white text-gray-800 dark:bg-gray-700 dark:text-white rounded-md hover:bg-gray-100 dark:hover:bg-gray-600">
-                      <span>{category.name}</span>
-                      <Button
-                        onClick={() => handleDeleteCategory(category.id)} // Pass category id for deletion
-                        className="bg-red-500 text-white text-xs"
-                      >
-                        Delete
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
+                {/* Card Design for Categories */}
+                <div className="mt-4 space-y-2 rounded-md shadow-md bg-white dark:bg-card p-4">
+                  {/* List of categories */}
+                  {categories.length > 0 ? (
+                    <ul className="space-y-2">
+                      {categories.map((category) => (
+                        <li
+                          key={category.id}
+                          className="flex justify-between items-center p-4 bg-gray-100 text-gray-800 dark:bg-cardDarker dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition duration-200"
+                        >
+                          <span>{category.name}</span>
+                          <Button
+                            onClick={() => handleDeleteCategory(category.id)} // Pass category id for deletion
+                            className="bg-red-500 text-white text-xs"
+                          >
+                            Delete
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-300">No categories found.</p>
+                  )}
+                </div>
               </div>
             )}
           </div>

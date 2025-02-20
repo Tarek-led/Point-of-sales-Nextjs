@@ -78,15 +78,6 @@ export default function Home() {
               Login
             </Button>
           </form>
-
-          <div className="mt-6">
-            <p className="text-sm text-gray-500 dark:text-gray-300">
-              Don&apos;t have an account?{' '}
-              <a href="/register" className="text-blue-500 hover:text-blue-700">
-                Register here.
-              </a>
-            </p>
-          </div>
         </div>
       </div>
     </main>
