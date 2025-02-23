@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { fakeTransactionComplete, fakeProductStockComplete } from './fake-data';
 
 // Initialize Prisma Client with SQLite
 const prisma = new PrismaClient();
@@ -7,22 +6,16 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Seeding database: SQLite (Offline Mode)");
 
-  // Clear existing data
+  // Clear existing data (optional, you can skip this if you don't want to delete data)
   await prisma.productStock.deleteMany();
   await prisma.product.deleteMany();
   await prisma.onSaleProduct.deleteMany();
   await prisma.transaction.deleteMany();
   await prisma.shopData.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.category.deleteMany(); // If you want to delete categories (optional)
 
-  // Insert new fake data
-  const fakerRounds = 40;
-  for (let i = 0; i < fakerRounds; i++) {
-    const product = await prisma.productStock.create({
-      data: fakeProductStockComplete(),
-    });
-    console.log(`✅ Created Product with id ${product.id}`);
-  }
+  console.log("✅ Seed completed. No fake data inserted.");
 }
 
 main()
