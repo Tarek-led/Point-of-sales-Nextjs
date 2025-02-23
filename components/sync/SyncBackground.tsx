@@ -12,7 +12,7 @@ const SyncBackground = () => {
           .then((data) => console.log(data.message))
           .catch((err) => console.error('Sync error:', err));
       }
-    }, 5 * 60 * 1000); // Sync every 5 minutes seconds
+    }, 300 * 60 * 1000); // Sync every 5 minutes seconds
 
     // Clean up the interval when the component unmounts
     return () => clearInterval(syncInterval);
