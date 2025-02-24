@@ -25,7 +25,6 @@ export function Orders() {
   const [selectedProducts, setSelectedProducts] = useState<ProductStockType[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load transaction and associated OnSaleProducts on mount
   useEffect(() => {
     const storedTransactionId = localStorage.getItem('transactionId');
     if (storedTransactionId) {
@@ -36,7 +35,6 @@ export function Orders() {
     }
   }, []);
 
-  // Fetch OnSaleProducts for a given transactionId
   const fetchOrderItems = async (id: string) => {
     try {
       const response = await axios.get(`/api/transactions/${id}`);
@@ -49,14 +47,13 @@ export function Orders() {
             sellprice: osp.product.sellprice,
           },
           quantity: osp.quantity,
-          onSaleProductId: osp.id, // Store the OnSaleProduct ID for deletion
+          onSaleProductId: osp.id,
         }));
         setOrderItems(items);
         localStorage.setItem(`orderItems_${id}`, JSON.stringify(items));
       }
     } catch (error: any) {
       console.error('Error fetching order items:', error);
-      // Fallback to localStorage if server fetch fails
       const storedOrderItems = localStorage.getItem(`orderItems_${id}`);
       if (storedOrderItems) {
         setOrderItems(JSON.parse(storedOrderItems));
@@ -99,8 +96,24 @@ export function Orders() {
 
     try {
       setLoading(true);
+
+      // Fetch current stock for the product
+      const stockResponse = await axios.get(`/api/storage`);
+      const productStock = stockResponse.data.find((ps: ProductStockType) => ps.id === product.id);
+      if (!productStock) {
+        throw new Error('Product stock not found');
+      }
+
+      const availableStock = productStock.stock;
       const existingItem = orderItems.find((item: any) => item.product.id === product.id);
-      const newQuantity = existingItem ? existingItem.quantity + quantity : quantity;
+      const currentQuantity = existingItem ? existingItem.quantity : 0;
+      const newQuantity = currentQuantity + quantity;
+
+      // Check if new quantity exceeds available stock
+      if (newQuantity > availableStock) {
+        toast.error(`Cannot add ${newQuantity} of ${product.name}. Only ${availableStock} in stock.`);
+        return;
+      }
 
       // Save to OnSaleProduct table
       const response = await axios.post('/api/onsale', {
