@@ -48,6 +48,41 @@
     --input: 240 3.7% 15.9%;
     --ring: 142.4 71.8% 29.2%;
   }
+
+  /* globals.css */
+.custom-scrollbar {
+  /* For Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #9da5b6 #424549; /* Thumb color, track color */
+}
+
+/* For Webkit browsers (Chrome, Safari, Edge) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px; /* Thin scrollbar */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #494c52; /* Light gray track */
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #6b7280; /* Gray thumb */
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #4b5563; /* Darker gray on hover */
+}
+
+/* Optional: Hide scrollbar when not hovering (Webkit only) */
+.custom-scrollbar:not(:hover)::-webkit-scrollbar-thumb {
+  background: transparent; /* Hide thumb when not hovering */
+}
+.custom-scrollbar:not(:hover)::-webkit-scrollbar-track {
+  background: transparent; /* Hide track when not hovering */
+}
 }
 
 @layer base {

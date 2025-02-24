@@ -1,4 +1,3 @@
-// components/CategorySidebar.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
@@ -33,7 +32,6 @@ export default function CategorySidebar({ onAddToOrder, onCategorySelect }: Cate
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [productStocks, setProductStocks] = useState<ProductStockType[]>([]);
 
-  // Fetch categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -46,7 +44,6 @@ export default function CategorySidebar({ onAddToOrder, onCategorySelect }: Cate
     fetchCategories();
   }, []);
 
-  // Fetch all product stocks from /api/storage
   useEffect(() => {
     const fetchProductStocks = async () => {
       try {
@@ -59,7 +56,6 @@ export default function CategorySidebar({ onAddToOrder, onCategorySelect }: Cate
     fetchProductStocks();
   }, []);
 
-  // Filter products by selected category and pass to parent
   useEffect(() => {
     if (selectedCategory) {
       const filtered = productStocks.filter(ps => ps.cat === selectedCategory);
@@ -71,10 +67,11 @@ export default function CategorySidebar({ onAddToOrder, onCategorySelect }: Cate
 
   return (
     <div className="flex flex-col h-full p-4">
-      {/* Categories List */}
       <div className="mb-4">
         <h2 className="text-lg font-bold mb-2 text-center">Categories</h2>
-        <div className="max-h-90 overflow-y-auto space-y-4">
+        <div
+          className="max-h-90 overflow-y-auto space-y-4 custom-scrollbar"
+        >
           {categories.map(cat => (
             <button
               key={cat.id}

@@ -25,7 +25,6 @@ export function Orders() {
   const [selectedProducts, setSelectedProducts] = useState<ProductStockType[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load transactionId and orderItems from localStorage on mount
   useEffect(() => {
     const storedTransactionId = localStorage.getItem('transactionId');
     if (storedTransactionId) {
@@ -39,7 +38,6 @@ export function Orders() {
     }
   }, []);
 
-  // Persist orderItems to localStorage whenever they change
   useEffect(() => {
     if (transactionId) {
       localStorage.setItem(`orderItems_${transactionId}`, JSON.stringify(orderItems));
@@ -58,8 +56,8 @@ export function Orders() {
         const { id } = response.data;
         localStorage.setItem('transactionId', id);
         setTransactionId(id);
-        setOrderItems([]); // Ensure orderItems is cleared for a new transaction
-        localStorage.removeItem(`orderItems_${id}`); // Clear any stale items
+        setOrderItems([]);
+        localStorage.removeItem(`orderItems_${id}`);
       } else {
         toast.error('Failed to create transaction');
       }
@@ -102,7 +100,7 @@ export function Orders() {
       await axios.patch(`/api/transactions/${transactionId}`, payload);
       toast.success('Order placed successfully!');
       setOrderItems([]);
-      localStorage.removeItem(`orderItems_${transactionId}`); // Clear after placing order
+      localStorage.removeItem(`orderItems_${transactionId}`);
     } catch (error: any) {
       toast.error('Error placing order: ' + error.message);
     } finally {
@@ -131,7 +129,7 @@ export function Orders() {
     localStorage.removeItem('transactionId');
     setOrderItems([]);
     if (transactionId) {
-      localStorage.removeItem(`orderItems_${transactionId}`); // Clear items for the deleted transaction
+      localStorage.removeItem(`orderItems_${transactionId}`);
     }
     setDialogDeleteOpen(false);
     createTransaction();
@@ -156,7 +154,7 @@ export function Orders() {
           </div>
         </CardHeader>
         <CardContent className="flex flex-1 overflow-hidden">
-          <div className="w-1/3 overflow-y-auto p-4 bg-secondary bg-opacity-50 rounded-lg">
+          <div className="w-1/3 overflow-y-auto p-4  bg-opacity-50 rounded-lg custom-scrollbar">
             <h3 className="text-md font-semibold mb-2">Products</h3>
             {selectedProducts.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
@@ -185,7 +183,7 @@ export function Orders() {
               <p className="text-sm text-gray-500">Select a category to view products.</p>
             )}
           </div>
-          <div className="w-1/4 border-r overflow-y-auto flex justify-end h-full">
+          <div className="w-1/4 border-r overflow-y-auto flex justify-end h-full custom-scrollbar">
             <div className="w-3/4">
               <CategorySidebar
                 onAddToOrder={handleAddToOrder}
@@ -193,7 +191,7 @@ export function Orders() {
               />
             </div>
           </div>
-          <div className="w-5/12 p-4 overflow-y-auto">
+          <div className="w-5/12 p-4 overflow-y-auto bg-secondary">
             <OrderSummary
               orderItems={orderItems}
               onPlaceOrder={handlePlaceOrder}
