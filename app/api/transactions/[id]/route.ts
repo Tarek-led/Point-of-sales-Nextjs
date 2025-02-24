@@ -71,38 +71,39 @@ export async function GET(
   }
 }
 
-// PATCH request handler to update transaction and product stocks
 export const PATCH = async (
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) => {
   try {
-    const prisma = new PrismaClient();
-
     const body = await request.json();
 
-    // Split productId and quantity strings and convert quantities to numbers
-    const productIds = body.productId.split(',').map((id: string) => id.trim());
-    const quantities = Array.isArray(body.qTy)
-      ? body.qTy.map(parseFloat)
-      : [parseFloat(body.qTy)];
-
-    // Check if productIds and quantities have the same length
-    if (productIds.length !== quantities.length) {
-      throw new Error('Product IDs and quantities must have the same length');
+    // Validate payload
+    if (!body.orderItems || !Array.isArray(body.orderItems) || !body.totalAmount) {
+      throw new Error('Invalid payload: orderItems (array) and totalAmount (number) are required');
     }
 
+    const orderItems = body.orderItems;
+    const totalAmount = parseFloat(body.totalAmount);
+    if (isNaN(totalAmount)) {
+      throw new Error('Invalid totalAmount: must be a number');
+    }
+
+    // Process each order item
     const updatedStocks = [];
-    for (let i = 0; i < productIds.length; i++) {
-      const productId = productIds[i];
-      const quantity = quantities[i];
+    for (const item of orderItems) {
+      const productId = item.product?.id;
+      const quantity = parseFloat(item.quantity);
+
+      if (!productId || isNaN(quantity)) {
+        throw new Error(`Invalid order item: product.id and quantity must be provided (item: ${JSON.stringify(item)})`);
+      }
 
       // Find existing stock for the product
       const existingStock = await prisma.productStock.findFirst({
         where: { id: productId },
       });
 
-      // Throw error if stock not found
       if (!existingStock) {
         throw new Error(`Stock not found for product ID: ${productId}`);
       }
@@ -116,17 +117,9 @@ export const PATCH = async (
       updatedStocks.push(updatedStock);
     }
 
-    // Parse totalAmount from request body
-    const totalAmount = parseFloat(body.totalAmount);
-    if (isNaN(totalAmount)) {
-      throw new Error('Invalid totalAmount');
-    }
-
     // Update transaction with totalAmount and mark as complete
     const editTransaction = await prisma.transaction.update({
-      where: {
-        id: String(params.id),
-      },
+      where: { id: params.id },
       data: {
         totalAmount,
         isComplete: true,
@@ -135,7 +128,6 @@ export const PATCH = async (
 
     await prisma.$disconnect();
 
-    // Return updated transaction and stocks
     return NextResponse.json(
       { editTransaction, updatedStocks },
       { status: 201 }

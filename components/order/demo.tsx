@@ -25,18 +25,44 @@ export function Orders() {
   const [selectedProducts, setSelectedProducts] = useState<ProductStockType[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Load transaction and associated OnSaleProducts on mount
   useEffect(() => {
     const storedTransactionId = localStorage.getItem('transactionId');
     if (storedTransactionId) {
       setTransactionId(storedTransactionId);
-      const storedOrderItems = localStorage.getItem(`orderItems_${storedTransactionId}`);
-      if (storedOrderItems) {
-        setOrderItems(JSON.parse(storedOrderItems));
-      }
+      fetchOrderItems(storedTransactionId);
     } else {
       createTransaction();
     }
   }, []);
+
+  // Fetch OnSaleProducts for a given transactionId
+  const fetchOrderItems = async (id: string) => {
+    try {
+      const response = await axios.get(`/api/transactions/${id}`);
+      if (response.status === 200) {
+        const onSaleProducts = response.data;
+        const items = onSaleProducts.map((osp: any) => ({
+          product: {
+            id: osp.productId,
+            name: osp.product.productstock.name,
+            sellprice: osp.product.sellprice,
+          },
+          quantity: osp.quantity,
+          onSaleProductId: osp.id, // Store the OnSaleProduct ID for deletion
+        }));
+        setOrderItems(items);
+        localStorage.setItem(`orderItems_${id}`, JSON.stringify(items));
+      }
+    } catch (error: any) {
+      console.error('Error fetching order items:', error);
+      // Fallback to localStorage if server fetch fails
+      const storedOrderItems = localStorage.getItem(`orderItems_${id}`);
+      if (storedOrderItems) {
+        setOrderItems(JSON.parse(storedOrderItems));
+      }
+    }
+  };
 
   useEffect(() => {
     if (transactionId) {
@@ -68,19 +94,41 @@ export function Orders() {
     }
   };
 
-  const handleAddToOrder = useCallback((product: any, quantity: number) => {
-    setOrderItems(prev => {
-      const existing = prev.find((item: any) => item.product.id === product.id);
-      if (existing) {
-        return prev.map((item: any) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
+  const handleAddToOrder = useCallback(async (product: any, quantity: number) => {
+    if (!transactionId) return;
+
+    try {
+      setLoading(true);
+      const existingItem = orderItems.find((item: any) => item.product.id === product.id);
+      const newQuantity = existingItem ? existingItem.quantity + quantity : quantity;
+
+      // Save to OnSaleProduct table
+      const response = await axios.post('/api/onsale', {
+        productId: product.id,
+        qTy: newQuantity,
+        transactionId,
+      });
+
+      if (response.status === 201) {
+        const onSaleProduct = response.data;
+        setOrderItems(prev => {
+          const updatedItems = prev.filter((item: any) => item.product.id !== product.id);
+          return [
+            ...updatedItems,
+            {
+              product: { id: product.id, name: product.name, sellprice: product.sellprice },
+              quantity: newQuantity,
+              onSaleProductId: onSaleProduct.id,
+            },
+          ];
+        });
       }
-      return [...prev, { product, quantity }];
-    });
-  }, []);
+    } catch (error: any) {
+      toast.error('Error adding to order: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [transactionId, orderItems]);
 
   const handlePlaceOrder = async () => {
     if (!transactionId || orderItems.length === 0) {
@@ -120,9 +168,20 @@ export function Orders() {
     setSelectedProducts(products);
   }, []);
 
-  const handleDeleteOrderItem = useCallback((productId: string) => {
-    setOrderItems(prev => prev.filter(item => item.product.id !== productId));
-  }, []);
+  const handleDeleteOrderItem = useCallback(async (productId: string) => {
+    const item = orderItems.find((i: any) => i.product.id === productId);
+    if (!item || !item.onSaleProductId) return;
+
+    try {
+      setLoading(true);
+      await axios.delete(`/api/onsale/${item.onSaleProductId}`);
+      setOrderItems(prev => prev.filter((i: any) => i.product.id !== productId));
+    } catch (error: any) {
+      toast.error('Error deleting item: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [orderItems]);
 
   const handleTransactionDelete = () => {
     setTransactionId(null);
