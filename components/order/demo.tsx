@@ -154,7 +154,7 @@ export function Orders() {
           </div>
         </CardHeader>
         <CardContent className="flex flex-1 overflow-hidden">
-          <div className="w-1/3 overflow-y-auto p-4  bg-opacity-50 rounded-lg custom-scrollbar">
+          <div className="w-2/5 overflow-y-auto p-4 bg-opacity-50 rounded-lg custom-scrollbar">
             <h3 className="text-md font-semibold mb-2">Products</h3>
             {selectedProducts.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
@@ -183,15 +183,15 @@ export function Orders() {
               <p className="text-sm text-gray-500">Select a category to view products.</p>
             )}
           </div>
-          <div className="w-1/4 border-r overflow-y-auto flex justify-end h-full custom-scrollbar">
-            <div className="w-3/4">
-              <CategorySidebar
-                onAddToOrder={handleAddToOrder}
-                onCategorySelect={handleCategorySelect}
-              />
-            </div>
+          <div className="w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
+          <div className="w-1/5 overflow-y-auto h-full custom-scrollbar">
+            <CategorySidebar
+              onAddToOrder={handleAddToOrder}
+              onCategorySelect={handleCategorySelect}
+            />
           </div>
-          <div className="w-5/12 p-4 overflow-y-auto bg-secondary">
+          <div className="w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
+          <div className="w-2/5 p-4 overflow-y-auto bg-secondary rounded-lg">
             <OrderSummary
               orderItems={orderItems}
               onPlaceOrder={handlePlaceOrder}
