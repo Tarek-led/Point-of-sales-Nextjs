@@ -1,6 +1,7 @@
-// components/OrderSummary.tsx
 'use client';
 import { ProductType } from './CategorySidebar';
+import { Trash2 } from 'lucide-react'; // Import Trash2 icon
+import { Button } from '@/components/ui/button'; // Import Button for styling
 
 type OrderItemType = {
   product: ProductType;
@@ -11,12 +12,14 @@ type OrderSummaryProps = {
   orderItems: OrderItemType[];
   onPlaceOrder: () => void;
   loading: boolean;
+  onDeleteOrderItem?: (productId: string) => void;
 };
 
 export default function OrderSummary({
   orderItems,
   onPlaceOrder,
   loading,
+  onDeleteOrderItem,
 }: OrderSummaryProps) {
   const subtotal = orderItems.reduce(
     (sum, item) => sum + item.product.sellprice * item.quantity,
@@ -36,6 +39,7 @@ export default function OrderSummary({
               <th className="p-2">Qty</th>
               <th className="p-2">Price</th>
               <th className="p-2">Total</th>
+              <th className="p-2"></th> {/* Empty header for delete icon */}
             </tr>
           </thead>
           <tbody>
@@ -47,12 +51,25 @@ export default function OrderSummary({
                 <td className="p-2 text-right">
                   ${(item.product.sellprice * item.quantity).toFixed(2)}
                 </td>
+                <td className="p-2 text-center">
+                  {onDeleteOrderItem && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDeleteOrderItem(item.product.id)}
+                      disabled={loading}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3} className="p-2 text-right font-bold">
+              <td colSpan={4} className="p-2 text-right font-bold">
                 Subtotal:
               </td>
               <td className="p-2 text-right font-bold">${subtotal.toFixed(2)}</td>

@@ -46,7 +46,7 @@ export default function Home() {
         <div className="absolute inset-0 flex items-center justify-center dark:bg-black bg-white/[0.8] [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] pointer-events-none"></div>
 
         <div className="flex flex-col items-center justify-center h-[30rem] bg-white p-10 rounded-lg shadow-md dark:bg-black dark:text-white w-full max-w-md">
-          <h2 className="text-2xl font-semibold mb-6">Sign in to Ixuapps</h2>
+          <h2 className="text-2xl font-semibold mb-6">POS System</h2>
 
           {errorMessage && (
             <div className="text-red-600 text-sm mb-4">

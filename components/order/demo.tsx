@@ -1,6 +1,5 @@
-// demo.tsx (Updated Orders Component)
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -11,12 +10,10 @@ import {
 } from '@/components/ui/card';
 import FullscreenButton from '@/components/fullscreen/fullscreen';
 import { Button } from '@/components/ui/button';
-import { ReloadIcon } from '@radix-ui/react-icons';
-import { TrashIcon } from '@radix-ui/react-icons';
+import { Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AlertDialogDeletetransaction } from './components/dialogDelete';
-
 import CategorySidebar, { ProductStockType } from './components/CategorySidebar';
 import OrderSummary from './components/OrderSummary';
 
@@ -28,44 +25,52 @@ export function Orders() {
   const [selectedProducts, setSelectedProducts] = useState<ProductStockType[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Load transactionId and orderItems from localStorage on mount
   useEffect(() => {
     const storedTransactionId = localStorage.getItem('transactionId');
     if (storedTransactionId) {
       setTransactionId(storedTransactionId);
+      const storedOrderItems = localStorage.getItem(`orderItems_${storedTransactionId}`);
+      if (storedOrderItems) {
+        setOrderItems(JSON.parse(storedOrderItems));
+      }
+    } else {
+      createTransaction();
     }
   }, []);
 
+  // Persist orderItems to localStorage whenever they change
+  useEffect(() => {
+    if (transactionId) {
+      localStorage.setItem(`orderItems_${transactionId}`, JSON.stringify(orderItems));
+    }
+  }, [orderItems, transactionId]);
+
   const createTransaction = async () => {
-    if (!transactionId) {
-      setLoading(true);
-      try {
-        if (!navigator.onLine) {
-          toast.error('You are offline. Please check your internet connection.');
-          return;
-        }
-        const response = await axios.post('/api/transactions');
-        if (response.status === 201) {
-          const { id } = response.data;
-          localStorage.setItem('transactionId', id);
-          setTransactionId(id);
-        } else {
-          toast.error('Failed to create transaction');
-        }
-      } catch (error) {
-        toast.error('An error occurred:' + error);
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    try {
+      if (!navigator.onLine) {
+        toast.error('You are offline. Please check your internet connection.');
+        return;
       }
+      const response = await axios.post('/api/transactions');
+      if (response.status === 201) {
+        const { id } = response.data;
+        localStorage.setItem('transactionId', id);
+        setTransactionId(id);
+        setOrderItems([]); // Ensure orderItems is cleared for a new transaction
+        localStorage.removeItem(`orderItems_${id}`); // Clear any stale items
+      } else {
+        toast.error('Failed to create transaction');
+      }
+    } catch (error) {
+      toast.error('An error occurred: ' + error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!transactionId) {
-      createTransaction();
-    }
-  }, [transactionId]);
-
-  const handleAddToOrder = (product: any, quantity: number) => {
+  const handleAddToOrder = useCallback((product: any, quantity: number) => {
     setOrderItems(prev => {
       const existing = prev.find((item: any) => item.product.id === product.id);
       if (existing) {
@@ -77,7 +82,7 @@ export function Orders() {
       }
       return [...prev, { product, quantity }];
     });
-  };
+  }, []);
 
   const handlePlaceOrder = async () => {
     if (!transactionId || orderItems.length === 0) {
@@ -97,6 +102,7 @@ export function Orders() {
       await axios.patch(`/api/transactions/${transactionId}`, payload);
       toast.success('Order placed successfully!');
       setOrderItems([]);
+      localStorage.removeItem(`orderItems_${transactionId}`); // Clear after placing order
     } catch (error: any) {
       toast.error('Error placing order: ' + error.message);
     } finally {
@@ -112,8 +118,23 @@ export function Orders() {
     setDialogDeleteOpen(false);
   };
 
-  const handleCategorySelect = (products: ProductStockType[]) => {
+  const handleCategorySelect = useCallback((products: ProductStockType[]) => {
     setSelectedProducts(products);
+  }, []);
+
+  const handleDeleteOrderItem = useCallback((productId: string) => {
+    setOrderItems(prev => prev.filter(item => item.product.id !== productId));
+  }, []);
+
+  const handleTransactionDelete = () => {
+    setTransactionId(null);
+    localStorage.removeItem('transactionId');
+    setOrderItems([]);
+    if (transactionId) {
+      localStorage.removeItem(`orderItems_${transactionId}`); // Clear items for the deleted transaction
+    }
+    setDialogDeleteOpen(false);
+    createTransaction();
   };
 
   return (
@@ -128,14 +149,13 @@ export function Orders() {
               variant="outline"
               size="icon"
               onClick={handleDialogDeleteOpen}
-              disabled={!transactionId}
+              disabled={!transactionId || loading}
             >
-              <TrashIcon />
+              <Trash2 />
             </Button>
           </div>
         </CardHeader>
         <CardContent className="flex flex-1 overflow-hidden">
-          {/* Left side: Product list with clickable boxes */}
           <div className="w-1/3 overflow-y-auto p-4 bg-secondary bg-opacity-50 rounded-lg">
             <h3 className="text-md font-semibold mb-2">Products</h3>
             {selectedProducts.length > 0 ? (
@@ -165,8 +185,6 @@ export function Orders() {
               <p className="text-sm text-gray-500">Select a category to view products.</p>
             )}
           </div>
-
-          {/* Middle: Category Sidebar (aligned right) */}
           <div className="w-1/4 border-r overflow-y-auto flex justify-end h-full">
             <div className="w-3/4">
               <CategorySidebar
@@ -175,13 +193,12 @@ export function Orders() {
               />
             </div>
           </div>
-
-          {/* Right side: Order Summary */}
           <div className="w-5/12 p-4 overflow-y-auto">
             <OrderSummary
               orderItems={orderItems}
               onPlaceOrder={handlePlaceOrder}
               loading={loading}
+              onDeleteOrderItem={handleDeleteOrderItem}
             />
           </div>
         </CardContent>
@@ -190,7 +207,7 @@ export function Orders() {
           open={dialogDeleteOpen}
           onClose={handleDialogDeleteClose}
           transactionId={transactionId}
-          setTransactionId={setTransactionId}
+          onDelete={handleTransactionDelete}
         />
       </Card>
     </div>
