@@ -13,6 +13,7 @@ type OrderSummaryProps = {
   onPlaceOrder: () => void;
   loading: boolean;
   onDeleteOrderItem?: (productId: string) => void;
+  isInitialLoading?: boolean; // Add initial loading prop
 };
 
 export default function OrderSummary({
@@ -20,6 +21,7 @@ export default function OrderSummary({
   onPlaceOrder,
   loading,
   onDeleteOrderItem,
+  isInitialLoading,
 }: OrderSummaryProps) {
   const subtotal = orderItems.reduce(
     (sum, item) => sum + item.product.sellprice * item.quantity,
@@ -29,7 +31,32 @@ export default function OrderSummary({
   return (
     <div className="h-full flex flex-col">
       <h2 className="text-xl font-bold mb-4">Order Summary</h2>
-      {orderItems.length === 0 ? (
+      {isInitialLoading ? (
+        <div className="overflow-y-auto max-h-[calc(100%-80px)] custom-scrollbar flex-1">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left p-2">Product</th>
+                <th className="p-2">Qty</th>
+                <th className="p-2">Price</th>
+                <th className="p-2">Total</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...Array(3)].map((_, i) => (
+                <tr key={i} className="border-b">
+                  <td className="p-2"><div className="skeleton h-4 w-24"></div></td>
+                  <td className="p-2 text-center"><div className="skeleton h-4 w-8 mx-auto"></div></td>
+                  <td className="p-2 text-right"><div className="skeleton h-4 w-12 ml-auto"></div></td>
+                  <td className="p-2 text-right"><div className="skeleton h-4 w-12 ml-auto"></div></td>
+                  <td className="p-2 text-center"><div className="skeleton h-8 w-8 mx-auto rounded-full"></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : orderItems.length === 0 ? (
         <p>No items added.</p>
       ) : (
         <>
@@ -72,13 +99,13 @@ export default function OrderSummary({
             </table>
           </div>
           <div className="mt-4 flex justify-between items-center">
-            <button
+            <Button
               className="bg-green-500 text-white px-4 py-2 rounded disabled:opacity-50"
               onClick={onPlaceOrder}
-              disabled={orderItems.length === 0 || loading}
+              disabled={orderItems.length === 0}
             >
               {loading ? 'Processing...' : 'Place Order'}
-            </button>
+            </Button>
             <span className="font-bold text-right">Subtotal: ${subtotal.toFixed(2)}</span>
           </div>
         </>

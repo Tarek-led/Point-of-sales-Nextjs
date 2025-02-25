@@ -53,6 +53,8 @@ export const POST = async (request: Request) => {
     }
 
     // Check if the new order quantity exceeds available stock
+    console.log('New quantity:', newQuantity);
+    console.log('Stock:', productStock.stock);
     if (newQuantity > productStock.stock) {
       return NextResponse.json(
         { error: 'Not enough stock available.' },

@@ -20,44 +20,53 @@ import OrderSummary from './components/OrderSummary';
 export function Orders() {
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const [orderItems, setOrderItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [dialogDeleteOpen, setDialogDeleteOpen] = useState(false);
-  const [selectedProducts, setSelectedProducts] = useState<ProductStockType[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<ProductStockType[] | undefined>(undefined);
+  const [allProducts, setAllProducts] = useState<ProductStockType[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const storedTransactionId = localStorage.getItem('transactionId');
-    if (storedTransactionId) {
-      setTransactionId(storedTransactionId);
-      fetchOrderItems(storedTransactionId);
-    } else {
-      createTransaction();
-    }
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        const storedTransactionId = localStorage.getItem('transactionId');
+        const [categoriesResponse, storageResponse] = await Promise.all([axios.get('/api/categories'), axios.get('/api/storage')]);
+
+        setAllProducts(storageResponse.data);
+
+        if (storedTransactionId) {
+          setTransactionId(storedTransactionId);
+          await fetchOrderItems(storedTransactionId);
+        } else {
+          await createTransaction();
+        }
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialData();
   }, []);
 
   const fetchOrderItems = async (id: string) => {
-    try {
-      const response = await axios.get(`/api/transactions/${id}`);
-      if (response.status === 200) {
-        const onSaleProducts = response.data;
-        const items = onSaleProducts.map((osp: any) => ({
-          product: {
-            id: osp.productId,
-            name: osp.product.productstock.name,
-            sellprice: osp.product.sellprice,
-          },
-          quantity: osp.quantity,
-          onSaleProductId: osp.id,
-        }));
-        setOrderItems(items);
-        localStorage.setItem(`orderItems_${id}`, JSON.stringify(items));
-      }
-    } catch (error: any) {
-      console.error('Error fetching order items:', error);
-      const storedOrderItems = localStorage.getItem(`orderItems_${id}`);
-      if (storedOrderItems) {
-        setOrderItems(JSON.parse(storedOrderItems));
-      }
+    const response = await axios.get(`/api/transactions/${id}`);
+    if (response.status === 200) {
+      const onSaleProducts = response.data;
+      const items = onSaleProducts.map((osp: any) => ({
+        product: {
+          id: osp.productId,
+          name: osp.product.productstock.name,
+          sellprice: osp.product.sellprice,
+        },
+        quantity: osp.quantity,
+        onSaleProductId: osp.id,
+      }));
+      setOrderItems(items);
+      localStorage.setItem(`orderItems_${id}`, JSON.stringify(items));
     }
   };
 
@@ -68,7 +77,6 @@ export function Orders() {
   }, [orderItems, transactionId]);
 
   const createTransaction = async () => {
-    setLoading(true);
     try {
       if (!navigator.onLine) {
         toast.error('You are offline. Please check your internet connection.');
@@ -80,76 +88,80 @@ export function Orders() {
         localStorage.setItem('transactionId', id);
         setTransactionId(id);
         setOrderItems([]);
+        setSelectedProducts(undefined); // Reset selected products
         localStorage.removeItem(`orderItems_${id}`);
       } else {
         toast.error('Failed to create transaction');
       }
     } catch (error) {
       toast.error('An error occurred: ' + error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleAddToOrder = useCallback(async (product: any, quantity: number) => {
-    if (!transactionId) return;
+const handleAddToOrder = useCallback(async (product: any, quantity: number) => {
+  if (!transactionId) return;
 
-    try {
-      setLoading(true);
-
-      // Fetch current stock for the product
-      const stockResponse = await axios.get(`/api/storage`);
-      const productStock = stockResponse.data.find((ps: ProductStockType) => ps.id === product.id);
-      if (!productStock) {
-        throw new Error('Product stock not found');
-      }
-
-      const availableStock = productStock.stock;
-      const existingItem = orderItems.find((item: any) => item.product.id === product.id);
-      const currentQuantity = existingItem ? existingItem.quantity : 0;
-      const newQuantity = currentQuantity + quantity;
-
-      // Check if new quantity exceeds available stock
-      if (newQuantity > availableStock) {
-        toast.error(`Cannot add ${newQuantity} of ${product.name}. Only ${availableStock} in stock.`);
-        return;
-      }
-
-      // Save to OnSaleProduct table
-      const response = await axios.post('/api/onsale', {
-        productId: product.id,
-        qTy: newQuantity,
-        transactionId,
-      });
-
-      if (response.status === 201) {
-        const onSaleProduct = response.data;
-        setOrderItems(prev => {
-          const updatedItems = prev.filter((item: any) => item.product.id !== product.id);
-          return [
-            ...updatedItems,
-            {
-              product: { id: product.id, name: product.name, sellprice: product.sellprice },
-              quantity: newQuantity,
-              onSaleProductId: onSaleProduct.id,
-            },
-          ];
-        });
-      }
-    } catch (error: any) {
-      toast.error('Error adding to order: ' + error.message);
-    } finally {
-      setLoading(false);
+  try {
+    setActionLoading(true);
+    const productStock = allProducts.find((ps: ProductStockType) => ps.id === product.id);
+    if (!productStock) {
+      throw new Error('Product stock not found');
     }
-  }, [transactionId, orderItems]);
+
+    const availableStock = productStock.stock;
+
+    // Check if product already exists in orderItems
+    const existingItem = orderItems.find((item: any) => item.product.id === product.id);
+    let newQuantity = quantity;
+
+    // If the item already exists in the order, add the quantity to the existing quantity
+    if (existingItem) {
+      newQuantity += existingItem.quantity;
+    }
+
+    // Check if newQuantity exceeds available stock
+    if (newQuantity > availableStock) {
+      toast.error(`Cannot add ${newQuantity} of ${product.name}. Only ${availableStock} in stock.`);
+      return;
+    }
+
+    const response = await axios.post('/api/onsale', {
+      productId: product.id,
+      qTy: newQuantity,
+      transactionId,
+    });
+
+    if (response.status === 201) {
+      const onSaleProduct = response.data;
+
+      // Update order items if product exists, else add it as new item
+      setOrderItems(prev => {
+        const updatedItems = prev.filter((item: any) => item.product.id !== product.id);
+        return [
+          ...updatedItems,
+          {
+            product: { id: product.id, name: product.name, sellprice: product.sellprice },
+            quantity: newQuantity,
+            onSaleProductId: onSaleProduct.id,
+          },
+        ];
+      });
+    }
+  } catch (error: any) {
+    toast.error('Error adding to order: ' + error.message);
+  } finally {
+    setActionLoading(false);
+  }
+}, [transactionId, orderItems, allProducts]);
+
 
   const handlePlaceOrder = async () => {
     if (!transactionId || orderItems.length === 0) {
       toast.error('No order to place');
       return;
     }
-    setLoading(true);
     try {
+      setActionLoading(true);
       const totalAmount = orderItems.reduce(
         (sum, item) => sum + item.product.sellprice * item.quantity,
         0
@@ -160,12 +172,13 @@ export function Orders() {
       };
       await axios.patch(`/api/transactions/${transactionId}`, payload);
       toast.success('Order placed successfully!');
-      setOrderItems([]);
+      setOrderItems([]);                     // Clear items immediately
       localStorage.removeItem(`orderItems_${transactionId}`);
+      await createTransaction();             // Start a new transaction
     } catch (error: any) {
       toast.error('Error placing order: ' + error.message);
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -186,13 +199,13 @@ export function Orders() {
     if (!item || !item.onSaleProductId) return;
 
     try {
-      setLoading(true);
+      setActionLoading(true);
       await axios.delete(`/api/onsale/${item.onSaleProductId}`);
       setOrderItems(prev => prev.filter((i: any) => i.product.id !== productId));
     } catch (error: any) {
       toast.error('Error deleting item: ' + error.message);
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   }, [orderItems]);
 
@@ -212,14 +225,16 @@ export function Orders() {
       <Card className="h-full w-full flex flex-col">
         <CardHeader>
           <CardTitle>Orders</CardTitle>
-          <CardDescription>{transactionId}</CardDescription>
+          <CardDescription>
+            {transactionId || (loading && <span className="skeleton w-24 h-4 inline-block"></span>)}
+          </CardDescription>
           <FullscreenButton targetRef={containerRef} />
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               size="icon"
               onClick={handleDialogDeleteOpen}
-              disabled={!transactionId || loading}
+              disabled={!transactionId}
             >
               <Trash2 />
             </Button>
@@ -228,7 +243,13 @@ export function Orders() {
         <CardContent className="flex flex-1 overflow-hidden">
           <div className="w-2/5 overflow-y-auto p-4 bg-opacity-50 rounded-lg custom-scrollbar">
             <h3 className="text-md font-semibold mb-2">Products</h3>
-            {selectedProducts.length > 0 ? (
+            {loading ? (
+              <div className="grid grid-cols-2 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="skeleton h-16 rounded-lg"></div>
+                ))}
+              </div>
+            ) : selectedProducts && selectedProducts.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
                 {selectedProducts.map(product => {
                   const sellprice =
@@ -260,6 +281,7 @@ export function Orders() {
             <CategorySidebar
               onAddToOrder={handleAddToOrder}
               onCategorySelect={handleCategorySelect}
+              loading={loading}
             />
           </div>
           <div className="w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
@@ -267,8 +289,9 @@ export function Orders() {
             <OrderSummary
               orderItems={orderItems}
               onPlaceOrder={handlePlaceOrder}
-              loading={loading}
+              loading={actionLoading}
               onDeleteOrderItem={handleDeleteOrderItem}
+              isInitialLoading={loading}
             />
           </div>
         </CardContent>
