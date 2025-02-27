@@ -4,26 +4,26 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import ShopnameCard from './components/shopname';
 import TaxrateCard from './components/taxrate';
-import CreateUser from './components/createuser'; // Import the CreateUser component
+import CreateUser from './components/createuser';
 import eventBus from '@/lib/even';
-import { Button } from '../ui/button'; // Replace with the actual path to your Button component
-import { Input } from '@/components/ui/input'; // Add input for adding categories
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Download, Upload } from 'lucide-react'; // Added icons for backup/import
 
 export function Setting() {
   const [storeName, setStoreName] = useState<string | null>(null);
   const [storeId, setStoreId] = useState<string | null>(null);
   const [taxRate, setTaxRate] = useState<number>(0);
-  const [isAdmin, setIsAdmin] = useState(false); // Track if the user is admin
-  const [users, setUsers] = useState<any[]>([]); // List of users
-  const [categories, setCategories] = useState<any[]>([]); // List of categories (updated to hold objects)
-  const [newCategory, setNewCategory] = useState(''); // For adding new categories
-  const [isUsersDropdownOpen, setIsUsersDropdownOpen] = useState(false); // For toggling the dropdown
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [newCategory, setNewCategory] = useState('');
+  const [isUsersDropdownOpen, setIsUsersDropdownOpen] = useState(false);
 
   useEffect(() => {
     const fetchShopData = async () => {
       try {
         const isOnline = navigator.onLine;
-
         if (!isOnline) {
           toast.error('You are offline. Please check your internet connection.');
           return;
@@ -44,12 +44,11 @@ export function Setting() {
       }
     };
 
-    // Fetch current user info to check if logged in user is admin
     const fetchCurrentUser = async () => {
       try {
         const response = await axios.get('/api/current-user');
         if (response.status === 200 && response.data.role === 'admin') {
-          setIsAdmin(true); // User is admin
+          setIsAdmin(true);
         }
       } catch (error) {
         console.error(error);
@@ -57,7 +56,6 @@ export function Setting() {
       }
     };
 
-    // Fetch list of users for the admin
     const fetchUsers = async () => {
       try {
         const response = await axios.get('/api/users');
@@ -69,12 +67,11 @@ export function Setting() {
       }
     };
 
-    // Fetch list of categories for the admin
     const fetchCategories = async () => {
       try {
         const response = await axios.get('/api/categories');
         if (response.status === 200) {
-          setCategories(response.data.categories); // Assume response contains objects with id and name
+          setCategories(response.data.categories);
         }
       } catch (error) {
         toast.error('Failed to load categories.');
@@ -88,7 +85,7 @@ export function Setting() {
 
     const handleEventBusEvent = () => {
       fetchShopData();
-      fetchCategories(); // Refresh categories list
+      fetchCategories();
     };
 
     eventBus.on('fetchStoreData', handleEventBusEvent);
@@ -98,12 +95,10 @@ export function Setting() {
     };
   }, []);
 
-  // Toggle the dropdown visibility
   const toggleDropdown = () => {
     setIsUsersDropdownOpen((prev) => !prev);
   };
 
-  // Handle adding new category
   const handleAddCategory = async () => {
     if (!newCategory) {
       toast.error('Please enter a category name.');
@@ -113,8 +108,8 @@ export function Setting() {
     try {
       const response = await axios.post('/api/categories', { name: newCategory });
       if (response.status === 200) {
-        const addedCategory = response.data.category; // Get the newly added category object
-        setCategories((prevCategories) => [...prevCategories, addedCategory]); // Add new category object
+        const addedCategory = response.data.category;
+        setCategories((prevCategories) => [...prevCategories, addedCategory]);
         setNewCategory('');
         toast.success('Category added successfully.');
       } else {
@@ -125,31 +120,29 @@ export function Setting() {
     }
   };
 
-  // Handle deleting category
   const handleDeleteCategory = async (categoryId: string) => {
-    console.log('Deleting category with ID:', categoryId); // Add this line for debugging
+    console.log('Deleting category with ID:', categoryId);
     try {
-      const response = await axios.delete(`/api/categories/${categoryId}`); // Send category ID in the URL
+      const response = await axios.delete(`/api/categories/${categoryId}`);
       if (response.status === 200) {
         setCategories((prevCategories) =>
-          prevCategories.filter((cat) => cat.id !== categoryId) // Remove the category by ID
+          prevCategories.filter((cat) => cat.id !== categoryId)
         );
         toast.success('Category deleted successfully.');
       } else {
         toast.error('Error deleting category.');
       }
     } catch (error) {
-      console.error('Error deleting category:', error); // Add this line for debugging
+      console.error('Error deleting category:', error);
       toast.error('Failed to delete category.');
     }
   };
 
-  // Handle deleting user
   const handleDeleteUser = async (userId: string) => {
     try {
-      const response = await axios.delete(`/api/users/${userId}`); // Send user ID in the URL
+      const response = await axios.delete(`/api/users/${userId}`);
       if (response.status === 200) {
-        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId)); // Remove user by ID
+        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
         toast.success('User deleted successfully.');
       } else {
         toast.error('Error deleting user.');
@@ -158,33 +151,103 @@ export function Setting() {
       toast.error('Failed to delete user.');
     }
   };
-  
+
+  // Backup function using API route
+  const handleBackup = async () => {
+    try {
+      const response = await axios.get('/api/backup/export', { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `backup-${Date.now()}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast.success('Backup created and downloaded successfully.');
+    } catch (error) {
+      toast.error('Failed to create backup.');
+    }
+  };
+
+  // Import function
+  const handleImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await axios.post('/api/backup/import', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        toast.success(response.data.message);
+
+        // Refresh settings data after import
+        const [shopDataRes, usersRes, categoriesRes] = await Promise.all([
+          axios.get('/api/shopdata'),
+          axios.get('/api/users'),
+          axios.get('/api/categories'),
+        ]);
+        setStoreId(shopDataRes.data.data.id);
+        setStoreName(shopDataRes.data.data.name);
+        setTaxRate(shopDataRes.data.data.tax);
+        setUsers(usersRes.data.users);
+        setCategories(categoriesRes.data.categories);
+      } catch (error) {
+        toast.error('Failed to import data.');
+      }
+    };
+    input.click();
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
         <div className="mx-auto grid w-full max-w-6xl items-start gap-6">
+          {/* Top Right Buttons for Admin */}
+          {isAdmin && (
+            <div className="flex justify-end gap-2 mb-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBackup}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Backup Data
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleImport}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Import Data
+              </Button>
+            </div>
+          )}
           <div className="grid gap-6">
             <ShopnameCard storeName={storeName} storeId={storeId} />
             <TaxrateCard tax={taxRate} storeId={storeId} />
-            {/* Only show CreateUser for admin users */}
             {isAdmin && <CreateUser />}
-            {/* Show list of users for the admin */}
             {isAdmin && (
               <div className="mt-6">
                 <h3 className="text-xl font-semibold mb-4">Existing Users</h3>
-                {/* Dropdown Button */}
                 <Button
                   onClick={toggleDropdown}
                   className="w-full py-2 text-white bg-primary hover:bg-primary/80 rounded-md text-left flex justify-between items-center"
                 >
                   {isUsersDropdownOpen ? 'Hide Users' : 'Show Users'}
-                  {/* Dropdown Arrow */}
                   <span className={`ml-2 transform ${isUsersDropdownOpen ? 'rotate-180' : ''}`}>
                     ▼
                   </span>
                 </Button>
-                {/* Dropdown Content */}
                 {isUsersDropdownOpen && (
                   <div className="mt-4 space-y-2 rounded-md shadow-md bg-white dark:bg-card p-4">
                     {users.length > 0 ? (
@@ -209,13 +272,9 @@ export function Setting() {
                 )}
               </div>
             )}
-
-            {/* Category Management */}
             {isAdmin && (
               <div className="mt-6">
                 <h3 className="text-xl font-semibold mb-4">Manage Categories</h3>
-
-                {/* Category input and add button */}
                 <div className="flex gap-2 mb-4">
                   <Input
                     value={newCategory}
@@ -227,10 +286,7 @@ export function Setting() {
                     Add Category
                   </Button>
                 </div>
-
-                {/* Card Design for Categories */}
                 <div className="mt-4 space-y-2 rounded-md shadow-md bg-white dark:bg-card p-4">
-                  {/* List of categories */}
                   {categories.length > 0 ? (
                     <ul className="space-y-2">
                       {categories.map((category) => (
@@ -240,7 +296,7 @@ export function Setting() {
                         >
                           <span>{category.name}</span>
                           <Button
-                            onClick={() => handleDeleteCategory(category.id)} // Pass category id for deletion
+                            onClick={() => handleDeleteCategory(category.id)}
                             className="bg-red-500 text-white text-xs"
                           >
                             Delete
