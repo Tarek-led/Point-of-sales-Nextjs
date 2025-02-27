@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import FullscreenButton from '@/components/fullscreen/fullscreen';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Printer } from 'lucide-react'; // Added Printer icon
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AlertDialogDeletetransaction } from './components/dialogDelete';
@@ -26,6 +26,7 @@ export function Orders() {
   const [dialogDeleteOpen, setDialogDeleteOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<ProductStockType[] | undefined>(undefined);
   const [allProducts, setAllProducts] = useState<ProductStockType[]>([]);
+  const [lastTransaction, setLastTransaction] = useState<{ id: string | null; items: any[] } | null>(null); // New state for last transaction
   const containerRef = useRef<HTMLDivElement>(null);
   const detailRef = useRef<{ handlePrint: () => void }>(null);
 
@@ -66,7 +67,7 @@ export function Orders() {
           id: osp.productId,
           name: osp.product.productstock.name,
           sellprice: osp.product.sellprice,
-          productstock: { name: osp.product.productstock.name }, // Match TransactionData
+          productstock: { name: osp.product.productstock.name },
         },
         quantity: osp.quantity,
         onSaleProductId: osp.id,
@@ -179,13 +180,16 @@ export function Orders() {
       };
       await axios.patch(`/api/transactions/${transactionId}`, payload);
       toast.success('Order placed successfully!');
-      
-      // Print receipt before clearing items
+
+      // Store the current transaction before clearing
+      setLastTransaction({ id: transactionId, items: [...orderItems] });
+
+      // Print receipt
       if (detailRef.current) {
         detailRef.current.handlePrint();
       }
-      
-      // Clear items and start new transaction after printing
+
+      // Clear items and start new transaction
       setOrderItems([]);
       localStorage.removeItem(`orderItems_${transactionId}`);
       await createTransaction();
@@ -200,6 +204,24 @@ export function Orders() {
   const handlePrintReceipt = () => {
     if (detailRef.current) {
       detailRef.current.handlePrint();
+    }
+  };
+
+  const handleReprintLastReceipt = () => {
+    if (!lastTransaction) {
+      toast.error('No previous transaction to reprint');
+      return;
+    }
+    if (detailRef.current) {
+      // Temporarily set the transaction data for reprinting
+      setTransactionId(lastTransaction.id);
+      setOrderItems(lastTransaction.items);
+      setTimeout(() => {
+        detailRef.current!.handlePrint();
+        // Restore current state after printing
+        setOrderItems([]);
+        setTransactionId(localStorage.getItem('transactionId'));
+      }, 100); // Small delay to ensure state updates
     }
   };
 
@@ -261,6 +283,17 @@ export function Orders() {
               disabled={!transactionId}
             >
               <Trash2 />
+            </Button>
+            {/* New Reprint Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReprintLastReceipt}
+              disabled={!lastTransaction || actionLoading}
+              className="flex items-center gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              Reprint Last
             </Button>
           </div>
         </CardHeader>
