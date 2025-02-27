@@ -1,6 +1,5 @@
 'use client';
 import { Printer } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,18 +15,17 @@ import { useEffect, useRef, useState } from 'react';
 import { TransactionData } from '@/types/transaction';
 import { useReactToPrint } from 'react-to-print';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 
 export default function DetailPage({ params }: { params: { id: string } }) {
-  // State variables
   const [taxRate, setTaxRate] = useState<number>(0);
+  const [shopName, setShopName] = useState<string>(''); // Added for shop name
   const [transactionData, setTransactionData] = useState<TransactionData[]>([]);
   const [printing, setPrinting] = useState(false);
 
-  // Reference for printing
   const route = useRouter();
   const componentRef = useRef<HTMLDivElement>(null);
 
-  // Calculate subtotal, tax, and total
   let subtotal = 0;
   transactionData.forEach((item) => {
     subtotal += item.product.sellprice * item.quantity;
@@ -35,44 +33,40 @@ export default function DetailPage({ params }: { params: { id: string } }) {
   const tax = subtotal * (taxRate / 100);
   const total = subtotal + tax;
 
-  // Redirect to error page
+  const currentDate = format(new Date(), 'MMMM dd, yyyy'); // Match Detail.tsx date format
+
   const handleRedirect = () => {
-    route.push(`/_error`);
+    route.push('/_error');
   };
 
-  // Handle printing
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
     documentTitle: 'Receipt',
-    onBeforeGetContent: () => {
-      setPrinting(true);
-    },
-    onAfterPrint: () => {
-      setPrinting(false);
-    },
+    onBeforeGetContent: () => setPrinting(true),
+    onAfterPrint: () => setPrinting(false),
   });
 
-  // Fetch shop data on component mount
+  // Fetch shop data (tax and name)
   useEffect(() => {
     const fetchShopData = async () => {
       try {
         const response = await axios.get('/api/shopdata');
         const shopdata = response.data.data;
-
         if (response.status === 200) {
-          setTaxRate(shopdata.tax);
+          setTaxRate(shopdata.tax || 0);
+          setShopName(shopdata.name || 'Unnamed Shop'); // Set shop name with fallback
         } else {
           console.log('Failed to fetch data:', shopdata.error);
         }
       } catch (error) {
-        console.error('Failed to fetch data:', error);
+        console.error('Failed to fetch shop data:', error);
       }
     };
 
     fetchShopData();
   }, []);
 
-  // Fetch transaction data for the given ID on component mount
+  // Fetch transaction data
   useEffect(() => {
     let isMounted = true;
 
@@ -116,15 +110,13 @@ export default function DetailPage({ params }: { params: { id: string } }) {
     };
   }, [params.id]);
 
-  // Render the component
   return (
     <div className="w-full h-full">
       <style jsx>{`
         @media print {
           @page {
-            size: 80mm 100mm; /* Adjust to your thermal paper size */
+            size: 80mm 100mm; /* Match Detail.tsx */
           }
-          /* Other print styles */
           .print-card {
             width: 80mm;
             max-width: 80mm;
@@ -147,10 +139,13 @@ export default function DetailPage({ params }: { params: { id: string } }) {
       >
         <CardHeader className="flex flex-row items-start bg-muted/50 print-card-header">
           <div className="grid gap-0.5">
-            <CardTitle className="group flex items-center gap-2 text-lg">
+            {/* Shop name above transaction ID */}
+            <div className="text-center font-bold text-lg">{shopName}</div>
+            <CardTitle className="group flex items-center gap-2 text-sm font-normal">
+              {/* Smaller, non-bold transaction ID */}
               {params.id}
             </CardTitle>
-            <CardDescription>Date: November 23, 2023</CardDescription>
+            <CardDescription>Date: {currentDate}</CardDescription>
           </div>
           <div className="ml-auto flex items-center gap-1 print:hidden">
             <Button
@@ -171,12 +166,11 @@ export default function DetailPage({ params }: { params: { id: string } }) {
               {transactionData.map((item, index) => (
                 <li key={index} className="flex items-center justify-between">
                   <span className="text-muted-foreground">
-                    {item.product.productstock.name} x{' '}
-                    <span>{item.quantity}</span>
+                    {item.product.productstock.name.charAt(0).toUpperCase() +
+                      item.product.productstock.name.slice(1).toLowerCase()}{' '}
+                    x <span>{item.quantity}</span>
                   </span>
-                  <span>
-                    ${(item.product.sellprice * item.quantity).toFixed(2)}
-                  </span>
+                  <span>${(item.product.sellprice * item.quantity).toFixed(2)}</span>
                 </li>
               ))}
             </ul>
