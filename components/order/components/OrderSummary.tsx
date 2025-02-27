@@ -10,15 +10,17 @@ type OrderItemType = {
 
 type OrderSummaryProps = {
   orderItems: OrderItemType[];
-  onPlaceOrder: () => void;
+  onPlaceOrder: () => Promise<void>;
+  onPrintReceipt: () => void; // Still here but optional now
   loading: boolean;
   onDeleteOrderItem?: (productId: string) => void;
-  isInitialLoading?: boolean; // Add initial loading prop
+  isInitialLoading?: boolean;
 };
 
 export default function OrderSummary({
   orderItems,
   onPlaceOrder,
+  onPrintReceipt,
   loading,
   onDeleteOrderItem,
   isInitialLoading,
@@ -27,6 +29,11 @@ export default function OrderSummary({
     (sum, item) => sum + item.product.sellprice * item.quantity,
     0
   );
+
+  const handlePlaceOrderAndPrint = async () => {
+    await onPlaceOrder(); // Printing is now handled in handlePlaceOrder
+    // onPrintReceipt(); // Optional: Remove this if printing is fully handled in Orders
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -101,8 +108,8 @@ export default function OrderSummary({
           <div className="mt-4 flex justify-between items-center">
             <Button
               className="bg-green-500 text-white px-4 py-2 rounded disabled:opacity-50"
-              onClick={onPlaceOrder}
-              disabled={orderItems.length === 0}
+              onClick={handlePlaceOrderAndPrint}
+              disabled={orderItems.length === 0 || loading}
             >
               {loading ? 'Processing...' : 'Place Order'}
             </Button>

@@ -16,6 +16,7 @@ import { toast } from 'react-toastify';
 import { AlertDialogDeletetransaction } from './components/dialogDelete';
 import CategorySidebar, { ProductStockType } from './components/CategorySidebar';
 import OrderSummary from './components/OrderSummary';
+import Detail from './components/detail';
 
 export function Orders() {
   const [transactionId, setTransactionId] = useState<string | null>(null);
@@ -26,13 +27,17 @@ export function Orders() {
   const [selectedProducts, setSelectedProducts] = useState<ProductStockType[] | undefined>(undefined);
   const [allProducts, setAllProducts] = useState<ProductStockType[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const detailRef = useRef<{ handlePrint: () => void }>(null);
 
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         setLoading(true);
         const storedTransactionId = localStorage.getItem('transactionId');
-        const [categoriesResponse, storageResponse] = await Promise.all([axios.get('/api/categories'), axios.get('/api/storage')]);
+        const [categoriesResponse, storageResponse] = await Promise.all([
+          axios.get('/api/categories'),
+          axios.get('/api/storage'),
+        ]);
 
         setAllProducts(storageResponse.data);
 
@@ -61,6 +66,7 @@ export function Orders() {
           id: osp.productId,
           name: osp.product.productstock.name,
           sellprice: osp.product.sellprice,
+          productstock: { name: osp.product.productstock.name }, // Match TransactionData
         },
         quantity: osp.quantity,
         onSaleProductId: osp.id,
@@ -88,7 +94,7 @@ export function Orders() {
         localStorage.setItem('transactionId', id);
         setTransactionId(id);
         setOrderItems([]);
-        setSelectedProducts(undefined); // Reset selected products
+        setSelectedProducts(undefined);
         localStorage.removeItem(`orderItems_${id}`);
       } else {
         toast.error('Failed to create transaction');
@@ -98,62 +104,63 @@ export function Orders() {
     }
   };
 
-const handleAddToOrder = useCallback(async (product: any, quantity: number) => {
-  if (!transactionId) return;
+  const handleAddToOrder = useCallback(
+    async (product: any, quantity: number) => {
+      if (!transactionId) return;
 
-  try {
-    setActionLoading(true);
-    const productStock = allProducts.find((ps: ProductStockType) => ps.id === product.id);
-    if (!productStock) {
-      throw new Error('Product stock not found');
-    }
+      try {
+        setActionLoading(true);
+        const productStock = allProducts.find((ps: ProductStockType) => ps.id === product.id);
+        if (!productStock) {
+          throw new Error('Product stock not found');
+        }
 
-    const availableStock = productStock.stock;
+        const availableStock = productStock.stock;
+        const existingItem = orderItems.find((item: any) => item.product.id === product.id);
+        let newQuantity = quantity;
 
-    // Check if product already exists in orderItems
-    const existingItem = orderItems.find((item: any) => item.product.id === product.id);
-    let newQuantity = quantity;
+        if (existingItem) {
+          newQuantity += existingItem.quantity;
+        }
 
-    // If the item already exists in the order, add the quantity to the existing quantity
-    if (existingItem) {
-      newQuantity += existingItem.quantity;
-    }
+        if (newQuantity > availableStock) {
+          toast.error(`Cannot add ${newQuantity} of ${product.name}. Only ${availableStock} in stock.`);
+          return;
+        }
 
-    // Check if newQuantity exceeds available stock
-    if (newQuantity > availableStock) {
-      toast.error(`Cannot add ${newQuantity} of ${product.name}. Only ${availableStock} in stock.`);
-      return;
-    }
+        const response = await axios.post('/api/onsale', {
+          productId: product.id,
+          qTy: newQuantity,
+          transactionId,
+        });
 
-    const response = await axios.post('/api/onsale', {
-      productId: product.id,
-      qTy: newQuantity,
-      transactionId,
-    });
-
-    if (response.status === 201) {
-      const onSaleProduct = response.data;
-
-      // Update order items if product exists, else add it as new item
-      setOrderItems(prev => {
-        const updatedItems = prev.filter((item: any) => item.product.id !== product.id);
-        return [
-          ...updatedItems,
-          {
-            product: { id: product.id, name: product.name, sellprice: product.sellprice },
-            quantity: newQuantity,
-            onSaleProductId: onSaleProduct.id,
-          },
-        ];
-      });
-    }
-  } catch (error: any) {
-    toast.error('Error adding to order: ' + error.message);
-  } finally {
-    setActionLoading(false);
-  }
-}, [transactionId, orderItems, allProducts]);
-
+        if (response.status === 201) {
+          const onSaleProduct = response.data;
+          setOrderItems((prev) => {
+            const updatedItems = prev.filter((item: any) => item.product.id !== product.id);
+            return [
+              ...updatedItems,
+              {
+                product: {
+                  id: product.id,
+                  name: product.name,
+                  sellprice: product.sellprice,
+                  productstock: { name: product.name },
+                },
+                quantity: newQuantity,
+                onSaleProductId: onSaleProduct.id,
+              },
+            ];
+          });
+        }
+      } catch (error: any) {
+        toast.error('Error adding to order: ' + error.message);
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [transactionId, orderItems, allProducts]
+  );
 
   const handlePlaceOrder = async () => {
     if (!transactionId || orderItems.length === 0) {
@@ -172,13 +179,27 @@ const handleAddToOrder = useCallback(async (product: any, quantity: number) => {
       };
       await axios.patch(`/api/transactions/${transactionId}`, payload);
       toast.success('Order placed successfully!');
-      setOrderItems([]);                     // Clear items immediately
+      
+      // Print receipt before clearing items
+      if (detailRef.current) {
+        detailRef.current.handlePrint();
+      }
+      
+      // Clear items and start new transaction after printing
+      setOrderItems([]);
       localStorage.removeItem(`orderItems_${transactionId}`);
-      await createTransaction();             // Start a new transaction
+      await createTransaction();
     } catch (error: any) {
       toast.error('Error placing order: ' + error.message);
+      throw error;
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    if (detailRef.current) {
+      detailRef.current.handlePrint();
     }
   };
 
@@ -194,20 +215,23 @@ const handleAddToOrder = useCallback(async (product: any, quantity: number) => {
     setSelectedProducts(products);
   }, []);
 
-  const handleDeleteOrderItem = useCallback(async (productId: string) => {
-    const item = orderItems.find((i: any) => i.product.id === productId);
-    if (!item || !item.onSaleProductId) return;
+  const handleDeleteOrderItem = useCallback(
+    async (productId: string) => {
+      const item = orderItems.find((i: any) => i.product.id === productId);
+      if (!item || !item.onSaleProductId) return;
 
-    try {
-      setActionLoading(true);
-      await axios.delete(`/api/onsale/${item.onSaleProductId}`);
-      setOrderItems(prev => prev.filter((i: any) => i.product.id !== productId));
-    } catch (error: any) {
-      toast.error('Error deleting item: ' + error.message);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [orderItems]);
+      try {
+        setActionLoading(true);
+        await axios.delete(`/api/onsale/${item.onSaleProductId}`);
+        setOrderItems((prev) => prev.filter((i: any) => i.product.id !== productId));
+      } catch (error: any) {
+        toast.error('Error deleting item: ' + error.message);
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [orderItems]
+  );
 
   const handleTransactionDelete = () => {
     setTransactionId(null);
@@ -251,20 +275,15 @@ const handleAddToOrder = useCallback(async (product: any, quantity: number) => {
               </div>
             ) : selectedProducts && selectedProducts.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
-                {selectedProducts.map(product => {
+                {selectedProducts.map((product) => {
                   const sellprice =
-                    product.Product && product.Product.length > 0
-                      ? product.Product[0].sellprice
-                      : 0;
+                    product.Product && product.Product.length > 0 ? product.Product[0].sellprice : 0;
                   return (
                     <div
                       key={product.id}
                       className="flex justify-between items-center border-2 border-gray-400 rounded-lg p-4 font-semibold hover:bg-cardDarker cursor-pointer"
                       onClick={() =>
-                        handleAddToOrder(
-                          { id: product.id, name: product.name, sellprice },
-                          1
-                        )
+                        handleAddToOrder({ id: product.id, name: product.name, sellprice }, 1)
                       }
                     >
                       <span>{product.name}</span>
@@ -289,6 +308,7 @@ const handleAddToOrder = useCallback(async (product: any, quantity: number) => {
             <OrderSummary
               orderItems={orderItems}
               onPlaceOrder={handlePlaceOrder}
+              onPrintReceipt={handlePrintReceipt}
               loading={actionLoading}
               onDeleteOrderItem={handleDeleteOrderItem}
               isInitialLoading={loading}
@@ -303,6 +323,15 @@ const handleAddToOrder = useCallback(async (product: any, quantity: number) => {
           onDelete={handleTransactionDelete}
         />
       </Card>
+
+      <div style={{ display: 'none' }}>
+        <Detail
+          ref={detailRef}
+          data={orderItems}
+          transactionId={transactionId}
+          setTransactionId={setTransactionId}
+        />
+      </div>
     </div>
   );
 }
