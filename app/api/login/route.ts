@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       });
 
       return new Response(
-        JSON.stringify({ message: 'Login successful', redirectUrl: '/home' }),
+        JSON.stringify({ message: 'Login successful', redirectUrl: '/orders' }),
         {
           status: 200,
           headers: { 'Set-Cookie': cookie }, // Set the cookie header in the response

@@ -1,14 +1,16 @@
+// app/(root)/home/page.tsx
 import React from 'react';
 import { BentoGridHome } from '@/components/bento/bentodemo';
-import ErrorBoundary from '@/components/toaster/toaster';
-const page = () => {
+import ProtectedRoute from '@/components/dashboard/ProtectedRoute';
+
+const HomePage = () => {
   return (
-    <div className="w-full">
-      <ErrorBoundary>
+    <ProtectedRoute>
+      <div className="w-full h-full">
         <BentoGridHome />
-      </ErrorBoundary>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 };
 
-export default page;
+export default HomePage;

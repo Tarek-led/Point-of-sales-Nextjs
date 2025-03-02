@@ -1,11 +1,16 @@
+// app/(root)/settings/page.tsx
 import React from 'react';
 import { Setting } from '@/components/setting/setting';
-const page = () => {
+import ProtectedRoute from '@/components/dashboard/ProtectedRoute';
+
+const SettingsPage = () => {
   return (
-    <div className="w-full h-full">
-      <Setting />
-    </div>
+    <ProtectedRoute>
+      <div className="w-full h-full">
+        <Setting />
+      </div>
+    </ProtectedRoute>
   );
 };
 
-export default page;
+export default SettingsPage;
