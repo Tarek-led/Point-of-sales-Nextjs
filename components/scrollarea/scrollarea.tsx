@@ -7,12 +7,24 @@ import { SCROLLBAR_ITEMS } from '@/constant/chartList';
 import { usePathname } from 'next/navigation';
 import { LineChart } from 'lucide-react';
 import Link from 'next/link';
+import { useUser } from '@/contexts/UserContext';
 
 // ScrollAreaDemo component
 export function ScrollAreaDemo() {
+  const { user, isLoading } = useUser();
   const pathname = usePathname();
   const [isScrollAreaVisible, setScrollAreaVisible] = React.useState(false);
 
+  // While loading, you might not render anything
+  if (isLoading) {
+    return null;
+  }
+
+  // If the user isn't an admin, don't render the scroll area
+  if (!user || user.role !== 'admin') {
+    return null;
+  }
+  
   // Toggle visibility of scroll area
   const toggleScrollAreaVisibility = () => {
     setScrollAreaVisible(!isScrollAreaVisible);
