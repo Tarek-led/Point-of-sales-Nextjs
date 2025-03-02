@@ -8,7 +8,6 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card';
-import FullscreenButton from '@/components/fullscreen/fullscreen';
 import { Button } from '@/components/ui/button';
 import { Trash2, Printer } from 'lucide-react'; // Added Printer icon
 import axios from 'axios';
@@ -274,7 +273,6 @@ export function Orders() {
           <CardDescription>
             {transactionId || (loading && <span className="skeleton w-24 h-4 inline-block"></span>)}
           </CardDescription>
-          <FullscreenButton targetRef={containerRef} />
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
