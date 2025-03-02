@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { DeleteAlertDialog } from './alertDelete';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@/contexts/UserContext'; // Import the user context
+
 type Products = {
   id: string;
   productId: string;
@@ -29,6 +31,7 @@ type Records = {
 const Dropdown = ({ records }: { records: Records }) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const route = useRouter();
+  const { user, isLoading } = useUser();
 
   const handleDeleteClose = () => {
     setDeleteOpen(false);
@@ -49,16 +52,15 @@ const Dropdown = ({ records }: { records: Records }) => {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuItem onClick={handleRedirect}>View</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setDeleteOpen(true)}>
-            Delete
-          </DropdownMenuItem>
+          {/* Render Delete only if user is an admin */}
+          {(!isLoading && user?.role === 'admin') && (
+            <DropdownMenuItem onClick={() => setDeleteOpen(true)}>
+              Delete
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <DeleteAlertDialog
-        open={deleteOpen}
-        onClose={handleDeleteClose}
-        data={records}
-      />
+      <DeleteAlertDialog open={deleteOpen} onClose={handleDeleteClose} data={records} />
     </>
   );
 };
