@@ -1,6 +1,7 @@
 {
   "name": "storage",
   "version": "0.1.0",
+  "main": "main.js",
   "private": true,
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -10,9 +11,21 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "electron:build": "electron-builder",
+    "postdeploy": "cp prisma/dev.db /app/storage/dev.db || true"
+  },
+  "build": {
+    "appId": "com.storage",
+    "win": {
+      "target": "nsis",
+      "signAndEditExecutable": false,
+      "certificateFile": null,
+      "certificatePassword": null
+    }
   },
   "dependencies": {
+    "electron-is-dev": "^3.0.1",
     "@hookform/resolvers": "^3.4.2",
     "@prisma/client": "^6.4.0",
     "@radix-ui/react-alert-dialog": "^1.0.5",
@@ -74,6 +87,8 @@
     "@types/uuid": "^9.0.8",
     "@typescript-eslint/eslint-plugin": "^7.10.0",
     "@typescript-eslint/parser": "^7.10.0",
+    "electron": "^34.3.0",
+    "electron-builder": "^25.1.8",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.3",
     "eslint-config-prettier": "^9.1.0",
