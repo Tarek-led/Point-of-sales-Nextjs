@@ -11,10 +11,14 @@ type OrderItemType = {
 type OrderSummaryProps = {
   orderItems: OrderItemType[];
   onPlaceOrder: () => Promise<void>;
-  onPrintReceipt: () => void; // Still here but optional now
+  onPrintReceipt: () => void;
   loading: boolean;
   onDeleteOrderItem?: (productId: string) => void;
   isInitialLoading?: boolean;
+  orderType: string;
+  paymentMethod: string;
+  setOrderType: (value: string) => void;
+  setPaymentMethod: (value: string) => void;
 };
 
 export default function OrderSummary({
@@ -24,6 +28,10 @@ export default function OrderSummary({
   loading,
   onDeleteOrderItem,
   isInitialLoading,
+  orderType,
+  paymentMethod,
+  setOrderType,
+  setPaymentMethod,
 }: OrderSummaryProps) {
   const subtotal = orderItems.reduce(
     (sum, item) => sum + item.product.sellprice * item.quantity,
@@ -31,13 +39,12 @@ export default function OrderSummary({
   );
 
   const handlePlaceOrderAndPrint = async () => {
-    await onPlaceOrder(); // Printing is now handled in handlePlaceOrder
-    // onPrintReceipt(); // Optional: Remove this if printing is fully handled in Orders
+    await onPlaceOrder();
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <h2 className="text-xl font-bold mb-4">Order Summary</h2>
+    <div className="h-full flex flex-col bg-white shadow-lg rounded-lg p-6">
+      <h2 className="text-2xl font-semibold mb-6">Order Summary</h2>
       {isInitialLoading ? (
         <div className="overflow-y-auto max-h-[calc(100%-80px)] custom-scrollbar flex-1">
           <table className="w-full border-collapse">
@@ -64,7 +71,7 @@ export default function OrderSummary({
           </table>
         </div>
       ) : orderItems.length === 0 ? (
-        <p>No items added.</p>
+        <p className="text-center text-gray-500">No items added.</p>
       ) : (
         <>
           <div className="overflow-y-auto max-h-[calc(100%-80px)] custom-scrollbar flex-1">
@@ -105,15 +112,44 @@ export default function OrderSummary({
               </tbody>
             </table>
           </div>
-          <div className="mt-4 flex justify-between items-center">
+
+          {/* Order Type and Payment Method */}
+          <div className="mt-6">
+            <div className="flex gap-6 mb-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Order Type</label>
+                <select
+                  value={orderType}
+                  onChange={(e) => setOrderType(e.target.value)}
+                  className="p-2 border rounded-md w-full"
+                >
+                  <option value="Eat In">Eat In</option>
+                  <option value="Takeaway">Takeaway</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Payment Method</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="p-2 border rounded-md w-full"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Card">Card</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-between items-center">
             <Button
-              className="bg-green-500 text-white px-4 py-2 rounded disabled:opacity-50"
+              className="bg-green-500 text-white px-6 py-2 rounded-md disabled:opacity-50"
               onClick={handlePlaceOrderAndPrint}
               disabled={orderItems.length === 0 || loading}
             >
               {loading ? 'Processing...' : 'Place Order'}
             </Button>
-            <span className="font-bold text-right">Subtotal: ${subtotal.toFixed(2)}</span>
+            <span className="font-semibold text-lg text-right">Subtotal: ${subtotal.toFixed(2)}</span>
           </div>
         </>
       )}

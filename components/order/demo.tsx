@@ -25,7 +25,10 @@ export function Orders() {
   const [dialogDeleteOpen, setDialogDeleteOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<ProductStockType[] | undefined>(undefined);
   const [allProducts, setAllProducts] = useState<ProductStockType[]>([]);
-  const [lastTransaction, setLastTransaction] = useState<{ id: string | null; items: any[] } | null>(null); // New state for last transaction
+  const [lastTransaction, setLastTransaction] = useState<{ id: string | null; items: any[] } | null>(null);
+  const [orderType, setOrderType] = useState('Eat In'); // Default value for order type
+  const [paymentMethod, setPaymentMethod] = useState('Cash'); // Default value for payment method
+
   const containerRef = useRef<HTMLDivElement>(null);
   const detailRef = useRef<{ handlePrint: () => void }>(null);
 
@@ -176,6 +179,8 @@ export function Orders() {
       const payload = {
         totalAmount,
         orderItems,
+        orderType, // Add orderType to payload
+        paymentMethod, // Add paymentMethod to payload
       };
       await axios.patch(`/api/transactions/${transactionId}`, payload);
       toast.success('Order placed successfully!');
@@ -194,7 +199,6 @@ export function Orders() {
       await createTransaction();
     } catch (error: any) {
       toast.error('Error placing order: ' + error.message);
-      throw error;
     } finally {
       setActionLoading(false);
     }
@@ -212,15 +216,13 @@ export function Orders() {
       return;
     }
     if (detailRef.current) {
-      // Temporarily set the transaction data for reprinting
       setTransactionId(lastTransaction.id);
       setOrderItems(lastTransaction.items);
       setTimeout(() => {
         detailRef.current!.handlePrint();
-        // Restore current state after printing
         setOrderItems([]);
         setTransactionId(localStorage.getItem('transactionId'));
-      }, 100); // Small delay to ensure state updates
+      }, 100);
     }
   };
 
@@ -282,7 +284,6 @@ export function Orders() {
             >
               <Trash2 />
             </Button>
-            {/* New Reprint Button */}
             <Button
               variant="outline"
               size="sm"
@@ -343,6 +344,10 @@ export function Orders() {
               loading={actionLoading}
               onDeleteOrderItem={handleDeleteOrderItem}
               isInitialLoading={loading}
+              orderType={orderType} // Pass orderType to OrderSummary
+              paymentMethod={paymentMethod} // Pass paymentMethod to OrderSummary
+              setOrderType={setOrderType} // Function to update orderType
+              setPaymentMethod={setPaymentMethod} // Function to update paymentMethod
             />
           </div>
         </CardContent>
@@ -361,6 +366,8 @@ export function Orders() {
           data={orderItems}
           transactionId={transactionId}
           setTransactionId={setTransactionId}
+          orderType={orderType} // Pass orderType to Detail
+          paymentMethod={paymentMethod} // Pass paymentMethod to Detail
         />
       </div>
     </div>

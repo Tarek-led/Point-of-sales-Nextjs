@@ -4,36 +4,27 @@ import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 're
 import { useReactToPrint } from 'react-to-print';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { TransactionData } from '@/types/transaction';
+import { ReloadIcon } from '@radix-ui/react-icons';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import eventBus from '@/lib/even';
-import { ReloadIcon } from '@radix-ui/react-icons';
 
 interface DetailProps {
-  data: TransactionData[];
+  data: any[];
   transactionId: string | null;
   setTransactionId: (id: string | null) => void;
+  orderType: string;
+  paymentMethod: string;
 }
 
 const Detail = forwardRef<{ handlePrint: () => void }, DetailProps>(
-  ({ data, transactionId, setTransactionId }, ref) => {
+  ({ data, transactionId, setTransactionId, orderType, paymentMethod }, ref) => {
     const componentRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(false);
-    const [printing, setPrinting] = useState(false);
     const [taxRate, setTaxRate] = useState<number>(0);
     const [shopName, setShopName] = useState<string>('');
-
-    console.log('Detail data:', data);
 
     let subtotal = 0;
     data.forEach((item) => {
@@ -47,21 +38,16 @@ const Detail = forwardRef<{ handlePrint: () => void }, DetailProps>(
     useEffect(() => {
       const fetchShopData = async () => {
         try {
-          const isOnline = navigator.onLine;
-          if (!isOnline) {
-            toast.error('You are offline. Please check your internet connection.');
-            return;
-          }
           const response = await axios.get('/api/shopdata');
           const shopdata = response.data.data;
           if (response.status === 200) {
             setTaxRate(shopdata.tax || 0);
             setShopName(shopdata.name || 'Unnamed Shop');
           } else {
-            toast.error('Failed to fetch data: ' + shopdata.error);
+            toast.error('Failed to fetch data');
           }
         } catch (error: any) {
-          toast.error('Failed to fetch data: ' + (error.response?.data.error || error.message));
+          toast.error('Failed to fetch data: ' + error.message);
         }
       };
       fetchShopData();
@@ -70,14 +56,12 @@ const Detail = forwardRef<{ handlePrint: () => void }, DetailProps>(
     const handlePrint = useReactToPrint({
       content: () => componentRef.current,
       documentTitle: 'Receipt',
-      onBeforeGetContent: () => setPrinting(true),
-      onAfterPrint: () => setPrinting(false),
     });
 
     const handleCheckout = async () => {
       setLoading(true);
       try {
-        const response = await axios.patch(`/api/transactions/${transactionId}`, {
+        await axios.patch(`/api/transactions/${transactionId}`, {
           totalAmount: total,
           qTy: data.map((item) => item.quantity),
           productId: data.map((item) => item.productId).join(', '),
@@ -87,7 +71,7 @@ const Detail = forwardRef<{ handlePrint: () => void }, DetailProps>(
         setTransactionId(null);
         eventBus.emit('clearTransactionData');
       } catch (error: any) {
-        toast.error('Checkout error: ' + (error.response?.data.error || error.message));
+        toast.error('Checkout error: ' + error.message);
       } finally {
         setLoading(false);
       }
@@ -107,16 +91,52 @@ const Detail = forwardRef<{ handlePrint: () => void }, DetailProps>(
             .print-card {
               width: 80mm;
               max-width: 80mm;
-              padding: 4mm;
+              padding: 8mm;
               border: none;
+              font-size: 14px;
+              font-family: 'Roboto', sans-serif;
+              background-color: #f9f9f9;
+              border-radius: 6px;
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 8mm;
+              padding-bottom: 6mm;
+              border-bottom: 1px solid #e0e0e0;
+            }
+            .header-title {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 2mm;
+              color: #333;
+            }
+            .header-subtitle {
               font-size: 12px;
-              font-family: 'Courier New', Courier, monospace;
+              color: #888;
             }
-            .print-card-header {
-              background-color: #f0f0f0;
+            .details {
+              margin-bottom: 8mm;
             }
-            .print-card-content {
-              padding: 0;
+            .totals {
+              font-weight: bold;
+            }
+            .total-row {
+              margin-top: 2mm;
+              display: flex;
+              justify-content: space-between;
+              font-size: 14px;
+            }
+            .separator {
+              margin-top: 8mm;
+              border-bottom: 1px solid #e0e0e0;
+              margin-bottom: 8mm;
+            }
+            .footer {
+              text-align: center;
+              font-size: 10px;
+              color: gray;
+              margin-top: 8mm;
             }
           }
         `}</style>
@@ -124,60 +144,50 @@ const Detail = forwardRef<{ handlePrint: () => void }, DetailProps>(
           className="print-card overflow-hidden print:w-full print:max-w-[80mm] print:p-4 print:border print:text-[12px] print:font-mono"
           ref={componentRef}
         >
-          <CardHeader className="print-card-header flex flex-row items-start bg-muted/50">
-            <div className="grid gap-0.5">
-              <div className="text-center font-bold text-lg">{shopName}</div>
-              <CardTitle className="group flex items-center gap-2 text-sm font-normal">
-                {/* Changed text-lg to text-sm and added font-normal */}
-                {transactionId}
-              </CardTitle>
-              <CardDescription>Date: {currentDate}</CardDescription>
-            </div>
-            <div className="ml-auto flex items-center gap-1 print:hidden">
-              <Button
-                size="icon"
-                variant="outline"
-                className="h-8 gap-1"
-                onClick={handleCheckout}
-                disabled={total === 0 || !transactionId || printing || loading}
-              >
-                {loading ? <ReloadIcon className="animate-spin" /> : <Printer />}
-              </Button>
-            </div>
+          <CardHeader className="header">
+            <div className="header-title">{shopName}</div>
+            <CardTitle className="header-subtitle">{transactionId}</CardTitle>
+            <CardDescription className="header-subtitle">Date: {currentDate}</CardDescription>
           </CardHeader>
-          <CardContent className="print-card-content p-6 text-sm">
-            <div className="grid gap-3">
-              <div className="font-semibold">Order Details</div>
-              <ul className="grid gap-3">
-                {data.map((item, index) => (
-                  <li key={index} className="flex items-center justify-between">
-                    <span className="text-muted-foreground">
-                      {item.product.productstock.name.charAt(0).toUpperCase() +
-                        item.product.productstock.name.slice(1).toLowerCase()}{' '}
-                      x <span>{item.quantity}</span>
-                    </span>
-                    <span>${(item.product.sellprice * item.quantity).toFixed(2)}</span>
-                  </li>
-                ))}
-              </ul>
-              <Separator className="my-2" />
-              <ul className="grid gap-3">
-                <li className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+
+          <CardContent className="details">
+            <div className="font-semibold text-lg">Order Details</div>
+            <ul>
+              {data.map((item, index) => (
+                <li key={index} className="flex items-center justify-between">
+                  <span>{item.product.productstock.name} x {item.quantity}</span>
+                  <span>${(item.product.sellprice * item.quantity).toFixed(2)}</span>
                 </li>
-                <li className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Tax</span>
-                  <span>${tax.toFixed(2)}</span>
-                </li>
-                <li className="flex items-center justify-between font-semibold">
-                  <span className="text-muted-foreground">Total</span>
-                  <span>${total.toFixed(2)}</span>
-                </li>
-              </ul>
-            </div>
+              ))}
+            </ul>
+            <Separator className="separator" />
+            <ul className="totals">
+              <li className="flex items-center justify-between">
+                <span>Order Type</span>
+                <span>{orderType}</span>
+              </li>
+              <li className="flex items-center justify-between">
+                <span>Payment Method</span>
+                <span>{paymentMethod}</span>
+              </li>
+              <li className="total-row">
+                <span>Subtotal</span>
+                <span>${subtotal.toFixed(2)}</span>
+              </li>
+              <li className="total-row">
+                <span>Tax</span>
+                <span>${tax.toFixed(2)}</span>
+              </li>
+              <li className="total-row">
+                <span>Total</span>
+                <span>${total.toFixed(2)}</span>
+              </li>
+            </ul>
           </CardContent>
-          <CardFooter className="flex flex-row items-center border-t bg-muted/50 px-6 py-3"></CardFooter>
+
+          <CardFooter className="footer">
+            Thank you for shopping with us!
+          </CardFooter>
         </Card>
       </div>
     );

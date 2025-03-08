@@ -54,11 +54,13 @@ model OnSaleProduct {
 }
 
 model Transaction {
-  id          String          @id // Use String for Transaction id
-  totalAmount Decimal?
-  createdAt   DateTime        @default(now())
-  isComplete  Boolean         @default(false)
-  products    OnSaleProduct[] // Relation to OnSaleProduct
+  id            String      @id
+  totalAmount   Decimal?
+  createdAt     DateTime    @default(now())
+  isComplete    Boolean     @default(false)
+  orderType     String?     // New field: Eat In or Takeaway
+  paymentMethod String?     // New field: Cash or Card
+  products      OnSaleProduct[]
 }
 
 model ShopData {
