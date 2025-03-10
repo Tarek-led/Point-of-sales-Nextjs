@@ -356,6 +356,7 @@ export function Orders() {
               paymentMethod={paymentMethod} // Pass paymentMethod to OrderSummary
               setOrderType={setOrderType} // Function to update orderType
               setPaymentMethod={setPaymentMethod} // Function to update paymentMethod
+              displayOrderType={true} // Display orderType in OrderSummary
             />
           </div>
         </CardContent>
