@@ -330,6 +330,7 @@ export function Orders() {
           <div className="w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
           <div className="w-1/5 overflow-y-auto h-full custom-scrollbar">
             <CategorySidebar
+              key={transactionId}
               onAddToOrder={handleAddToOrder}
               onCategorySelect={handleCategorySelect}
               loading={loading}
