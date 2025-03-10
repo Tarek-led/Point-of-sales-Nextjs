@@ -49,37 +49,54 @@
     --ring: 142.4 71.8% 29.2%;
   }
 
-  /* globals.css */
   .custom-scrollbar {
     /* For Firefox */
     scrollbar-width: thin;
-    scrollbar-color: #9da5b6 #424549; /* Thumb color, track color */
+    scrollbar-color: #ffffff #c5c5c5; /* Thumb color (light), track color (light) */
   }
-
+  
   /* For Webkit browsers (Chrome, Safari, Edge) */
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px; /* Thin scrollbar */
   }
-
+  
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: #494c52; /* Light gray track */
+    background: #f3f4f6; /* Light gray track */
     border-radius: 4px;
   }
-
+  
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #6b7280; /* Gray thumb */
     border-radius: 4px;
     transition: background 0.2s ease;
   }
-
+  
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #4b5563; /* Darker gray on hover */
   }
-
+  
+  /* Dark mode styles */
+  .dark .custom-scrollbar {
+    scrollbar-color: #9da5b6 #424549; /* Thumb color (dark), track color (dark) */
+  }
+  
+  .dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: #494c52; /* Dark gray track */
+  }
+  
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #6b7280; /* Light gray thumb */
+  }
+  
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1; /* Lighter gray on hover */
+  }
+  
   /* Optional: Hide scrollbar when not hovering (Webkit only) */
   .custom-scrollbar:not(:hover)::-webkit-scrollbar-thumb {
     background: transparent; /* Hide thumb when not hovering */
   }
+  
   .custom-scrollbar:not(:hover)::-webkit-scrollbar-track {
     background: transparent; /* Hide track when not hovering */
   }
