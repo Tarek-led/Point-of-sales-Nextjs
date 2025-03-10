@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -81,16 +81,15 @@ export function Orders() {
 
   useEffect(() => {
     if (transactionId) {
-      localStorage.setItem(`orderItems_${transactionId}`, JSON.stringify(orderItems));
+      const timer = setTimeout(() => {
+        localStorage.setItem(`orderItems_${transactionId}`, JSON.stringify(orderItems));
+      }, 500); // 500ms delay
+      return () => clearTimeout(timer);
     }
   }, [orderItems, transactionId]);
 
   const createTransaction = async () => {
     try {
-      if (!navigator.onLine) {
-        toast.error('You are offline. Please check your internet connection.');
-        return;
-      }
       const response = await axios.post('/api/transactions');
       if (response.status === 201) {
         const { id } = response.data;
@@ -107,13 +106,21 @@ export function Orders() {
     }
   };
 
+  const productLookup = useMemo(() => {
+    const lookup: { [key: string]: ProductStockType } = {};
+    allProducts.forEach((ps) => {
+      lookup[ps.id] = ps;
+    });
+    return lookup;
+  }, [allProducts]);
+  
   const handleAddToOrder = useCallback(
     async (product: any, quantity: number) => {
       if (!transactionId) return;
 
       try {
         setActionLoading(true);
-        const productStock = allProducts.find((ps: ProductStockType) => ps.id === product.id);
+        const productStock = productLookup[product.id];
         if (!productStock) {
           throw new Error('Product stock not found');
         }
@@ -162,7 +169,7 @@ export function Orders() {
         setActionLoading(false);
       }
     },
-    [transactionId, orderItems, allProducts]
+    [transactionId, orderItems, productLookup]
   );
 
   const handlePlaceOrder = async () => {
