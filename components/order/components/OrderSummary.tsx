@@ -19,6 +19,7 @@ type OrderSummaryProps = {
   paymentMethod: string;
   setOrderType: (value: string) => void;
   setPaymentMethod: (value: string) => void;
+  displayOrderType?: boolean;
 };
 
 export default function OrderSummary({
@@ -32,6 +33,7 @@ export default function OrderSummary({
   paymentMethod,
   setOrderType,
   setPaymentMethod,
+  displayOrderType = true,
 }: OrderSummaryProps) {
   const subtotal = orderItems.reduce(
     (sum, item) => sum + item.product.sellprice * item.quantity,
@@ -126,20 +128,36 @@ export default function OrderSummary({
 
           {/* Order Type and Payment Method */}
           <div className="mt-4">
-            <div className="flex gap-6 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 dark:text-gray-200">
-                  Order Type
-                </label>
-                <select
-                  value={orderType}
-                  onChange={(e) => setOrderType(e.target.value)}
-                  className="p-2 border rounded-md w-full dark:bg-gray-800 dark:border-gray-700 dark:text-white"
-                >
-                  <option value="Eat In">Eat In</option>
-                  <option value="Takeaway">Takeaway</option>
-                </select>
+            {displayOrderType ? (
+              <div className="flex gap-6 mb-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                    Order Type
+                  </label>
+                  <select
+                    value={orderType}
+                    onChange={(e) => setOrderType(e.target.value)}
+                    className="p-2 border rounded-md w-full dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                  >
+                    <option value="Eat In">Eat In</option>
+                    <option value="Takeaway">Takeaway</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                    Payment Method
+                  </label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="p-2 border rounded-md w-full dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                  </select>
+                </div>
               </div>
+            ) : (
               <div>
                 <label className="block text-sm font-medium mb-1 dark:text-gray-200">
                   Payment Method
@@ -153,7 +171,7 @@ export default function OrderSummary({
                   <option value="Card">Card</option>
                 </select>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="mt-4 flex justify-between items-center">
