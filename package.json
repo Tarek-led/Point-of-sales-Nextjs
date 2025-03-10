@@ -7,11 +7,12 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "cross-env TAURI_ENV=true TAURI_APP_DATA_DIR=\"C:\\Users\\ErarS\\AppData\\Roaming\\com.pos.system\" next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "tauri": "tauri"
   },
   "build": {
     "appId": "com.storage",
@@ -23,7 +24,6 @@
     }
   },
   "dependencies": {
-    "electron-is-dev": "^3.0.1",
     "@hookform/resolvers": "^3.4.2",
     "@prisma/client": "^6.4.0",
     "@radix-ui/react-alert-dialog": "^1.0.5",
@@ -43,6 +43,7 @@
     "@radix-ui/react-tooltip": "^1.0.7",
     "@supabase/supabase-js": "^2.48.1",
     "@tabler/icons-react": "^3.3.0",
+    "@tauri-apps/api": "^2.3.0",
     "@vercel/analytics": "^1.2.2",
     "@vercel/speed-insights": "^1.0.10",
     "apexcharts": "^3.49.1",
@@ -54,6 +55,7 @@
     "cookie": "^1.0.2",
     "date-fns": "^3.6.0",
     "decimal.js": "^10.4.3",
+    "electron-is-dev": "^3.0.1",
     "framer-motion": "^11.1.8",
     "is-online": "^10.0.0",
     "lucide-react": "^0.378.0",
@@ -85,6 +87,7 @@
     "@types/uuid": "^9.0.8",
     "@typescript-eslint/eslint-plugin": "^7.10.0",
     "@typescript-eslint/parser": "^7.10.0",
+    "cross-env": "^7.0.3",
     "electron": "^34.3.0",
     "electron-builder": "^25.1.8",
     "eslint": "^8.57.0",
