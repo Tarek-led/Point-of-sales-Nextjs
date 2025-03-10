@@ -1,3 +1,4 @@
+// table.tsx
 import {
   Card,
   CardContent,
@@ -6,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-
 import { Table } from '@/components/ui/table';
 import TableHeadRecords from './components/TableHead';
 import TableBodyRecords from './components/TableBody';
@@ -15,6 +15,8 @@ import { PageProps } from '@/types/paginations';
 import { PaginationDemo } from '@/components/paginations/pagination';
 import { SearchInput } from '@/components/search/search';
 import { toast } from 'react-toastify';
+import RecordsFilter from './components/RecordsFilter'; // Import your new date filter component
+
 interface Product {
   id: string;
   productId: string;
@@ -31,16 +33,26 @@ interface Recordsdata {
 }
 
 export async function Records(props: PageProps) {
-  const pageNumber = Number(props?.searchParams?.page || 1); // Get the page number. Default to 1 if not provided.
+  const pageNumber = Number(props?.searchParams?.page || 1);
   const take = 5;
   const skip = (pageNumber - 1) * take;
   const search =
     typeof props?.searchParams?.search === 'string'
-      ? props?.searchParams?.search
+      ? props.searchParams.search
       : undefined;
-  const result = await fetchRecords({ take, skip, query: search });
+  
+  // Extract startDate and endDate from search params if provided
+  const startDate =
+    typeof props?.searchParams?.startDate === 'string'
+      ? props.searchParams.startDate
+      : undefined;
+  const endDate =
+    typeof props?.searchParams?.endDate === 'string'
+      ? props.searchParams.endDate
+      : undefined;
+
+  const result = await fetchRecords({ take, skip, query: search, startDate, endDate });
   if (!result) {
-    // Handle the case where fetchProduct returns undefined, e.g., show an error message
     toast.error('Failed to fetch product data');
     return;
   }
@@ -62,8 +74,11 @@ export async function Records(props: PageProps) {
             <CardDescription>Manage your products.</CardDescription>
           </CardHeader>
         </div>
-        <div className="relative ml-auto mr-4 flex-1 md:grow-0">
-          <SearchInput search={search} />
+        <div className="flex items-center gap-4 ml-auto mr-4 md:grow-0">
+          <RecordsFilter />
+          <div className='relative md:grow-0'>
+            <SearchInput search={search} />
+          </div>
         </div>
       </div>
       <CardContent className="flex-grow">
