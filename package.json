@@ -7,15 +7,23 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "scripts": {
-    "dev": "cross-env TAURI_ENV=true TAURI_APP_DATA_DIR=\"C:\\Users\\ErarS\\AppData\\Roaming\\com.pos.system\" next dev",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "tauri": "tauri"
+    "electron:dev": "electron .",
+    "electron:build": "electron-builder"
   },
   "build": {
-    "appId": "com.storage",
+    "appId": "com.storage.mypos",
+    "productName": "MyPOS",
+    "files": [
+      "main.js",
+      "package.json",
+      ".next",
+      "node_modules"
+    ],
     "win": {
       "target": "nsis",
       "signAndEditExecutable": false,
@@ -43,7 +51,6 @@
     "@radix-ui/react-tooltip": "^1.0.7",
     "@supabase/supabase-js": "^2.48.1",
     "@tabler/icons-react": "^3.3.0",
-    "@tauri-apps/api": "^2.3.0",
     "@vercel/analytics": "^1.2.2",
     "@vercel/speed-insights": "^1.0.10",
     "apexcharts": "^3.49.1",

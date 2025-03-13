@@ -1,6 +1,6 @@
 'use client';
 import { ApexOptions } from 'apexcharts';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,6 @@ const ReactApexChart = dynamic(() => import('react-apexcharts'), {
   ssr: false,
 });
 
-// Define the state interface for ChartOne
 interface ChartOneState {
   series: {
     name: string;
@@ -120,8 +119,8 @@ const ChartFour: React.FC = () => {
     }));
   }, [startDate, endDate]);
 
-  // Fetch data from the API
-  const fetchData = async () => {
+  // Wrap fetchData in useCallback
+  const fetchData = useCallback(async () => {
     try {
       const response = await axios.get(
         `/api/profit?start=${startDate}&end=${endDate}`
@@ -157,12 +156,12 @@ const ChartFour: React.FC = () => {
     } catch (error) {
       console.error('Error fetching data', error);
     }
-  };
+  }, [startDate, endDate]);
 
   // Fetch data when startDate or endDate changes
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate]);
+  }, [fetchData]);
 
   // Update state when dataChart changes
   useEffect(() => {

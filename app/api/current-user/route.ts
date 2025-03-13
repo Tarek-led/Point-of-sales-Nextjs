@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { parse } from 'cookie';
 
 const prisma = new PrismaClient();
-
+export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   try {
     // parse cookies from the request headers

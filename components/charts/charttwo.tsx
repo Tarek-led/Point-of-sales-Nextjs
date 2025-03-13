@@ -1,10 +1,11 @@
 'use client';
 import { ApexOptions } from 'apexcharts';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
 import { Input } from '@/components/ui/input';
 import { initialChartoneOptions } from '@/lib/charts';
+
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
   ssr: false,
 });
@@ -90,29 +91,27 @@ const ChartTwo: React.FC = () => {
     }));
   }, [startDate, endDate]);
 
-  const fetchData = async () => {
+  // Wrap fetchData in useCallback
+  const fetchData = useCallback(async () => {
     try {
       const response = await axios.get(
         `/api/chart/income?start=${startDate}&end=${endDate}`
       );
       const { combinedResult } = response.data;
 
-      // Assuming combinedResult is an array of objects with totalQuantity field
       const chartData = combinedResult.map(
         (item: { totalIncome: number }) => item.totalIncome
       );
 
-      // Update dataChart with the processed data
       setDataChart(chartData);
     } catch (error) {
       console.error('Error fetching data', error);
     }
-  };
+  }, [startDate, endDate]);
 
-  // Fetch data when startDate or endDate changes
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate]);
+  }, [fetchData]);
 
   // Update state when dataChart changes
   useEffect(() => {

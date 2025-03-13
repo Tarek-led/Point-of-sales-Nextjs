@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import axios from 'axios';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { TransactionData } from '@/types/transaction';
 import { useReactToPrint } from 'react-to-print';
 import { useRouter } from 'next/navigation';
@@ -35,9 +35,10 @@ export default function DetailPage({ params }: { params: { id: string } }) {
 
   const currentDate = format(new Date(), 'MMMM dd, yyyy'); // Match Detail.tsx date format
 
-  const handleRedirect = () => {
+  // Wrap handleRedirect in useCallback so its reference is stable
+  const handleRedirect = useCallback(() => {
     route.push('/_error');
-  };
+  }, [route]);
 
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
@@ -108,7 +109,7 @@ export default function DetailPage({ params }: { params: { id: string } }) {
     return () => {
       isMounted = false;
     };
-  }, [params.id]);
+  }, [params.id, handleRedirect]);
 
   return (
     <div className="w-full h-full">

@@ -1,6 +1,6 @@
 'use client';
 import { ApexOptions } from 'apexcharts';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
 import { Input } from '@/components/ui/input';
@@ -108,8 +108,8 @@ const ChartOne: React.FC = () => {
     }));
   }, [startDate, endDate]);
 
-  // Function to fetch data from the API
-  const fetchData = async () => {
+  // Wrap fetchData in useCallback so it can be included in the dependency array
+  const fetchData = useCallback(async () => {
     try {
       const response = await axios.get(
         `/api/productsale?start=${startDate}&end=${endDate}`
@@ -121,17 +121,16 @@ const ChartOne: React.FC = () => {
         (item: { totalQuantity: number }) => item.totalQuantity
       );
 
-      // Update dataChart with the processed data
       setDataChart(chartData);
     } catch (error) {
       console.error('Error fetching data', error);
     }
-  };
+  }, [startDate, endDate]);
 
-  // Fetch data when startDate or endDate changes
+  // Fetch data when fetchData changes
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate]);
+  }, [fetchData]);
 
   // Update chart series data when dataChart changes
   useEffect(() => {
