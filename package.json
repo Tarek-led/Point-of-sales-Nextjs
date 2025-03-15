@@ -21,8 +21,8 @@
     "files": [
       "main.js",
       "package.json",
-      ".next",
-      "node_modules"
+      "node_modules",
+      ".next"
     ],
     "win": {
       "target": "nsis",
@@ -32,6 +32,7 @@
     }
   },
   "dependencies": {
+    "@electron-toolkit/utils": "^4.0.0",
     "@hookform/resolvers": "^3.4.2",
     "@prisma/client": "^6.4.0",
     "@radix-ui/react-alert-dialog": "^1.0.5",
@@ -64,10 +65,11 @@
     "decimal.js": "^10.4.3",
     "electron-is-dev": "^3.0.1",
     "framer-motion": "^11.1.8",
+    "get-port-please": "^3.1.2",
     "is-online": "^10.0.0",
     "lucide-react": "^0.378.0",
     "mini-svg-data-uri": "^1.4.4",
-    "next": "14.2.3",
+    "next": "^14.2.3",
     "next-auth": "^4.24.11",
     "next-themes": "^0.3.0",
     "nextjs-toploader": "^1.6.12",
@@ -94,6 +96,7 @@
     "@types/uuid": "^9.0.8",
     "@typescript-eslint/eslint-plugin": "^7.10.0",
     "@typescript-eslint/parser": "^7.10.0",
+    "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
     "electron": "^34.3.0",
     "electron-builder": "^25.1.8",

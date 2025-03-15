@@ -1,84 +1,61 @@
-const { app, BrowserWindow } = require('electron');
-const { spawn } = require('child_process');
-const http = require('http');
+const { app, BrowserWindow } = require("electron");
+const { exec } = require("child_process");
+const path = require("path");
 
-const port = process.env.PORT || 3000;
-let nextServer;
+// If you used to do "require('electron-is-dev')", you can add it back,
+// but let's keep it even simpler by checking NODE_ENV.
+const isDev = process.env.NODE_ENV === "development";
 
-// Start Next.js server as a child process
-function startNextServer() {
-  nextServer = spawn('npm', ['run', 'start'], {
-    cwd: __dirname,
-    shell: true,
-    stdio: 'inherit',
-  });
+let mainWindow;
+let serverProcess;
 
-  nextServer.on('error', (err) => {
-    console.error('Error starting Next.js server:', err);
-  });
-}
-
-// Poll the server until it's ready
-function waitForServer(url, callback, retries = 20, interval = 500) {
-  let attempts = 0;
-  
-  const checkServer = () => {
-    http.get(url, (res) => {
-      // Check if the server responds with a status in the 200s
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        console.log('Server is ready!');
-        callback();
-      } else {
-        console.log(`Server not ready yet (status: ${res.statusCode}). Retrying...`);
-        retry();
-      }
-    }).on('error', (err) => {
-      console.log(`Server not ready yet (error: ${err.message}). Retrying...`);
-      retry();
-    });
-  };
-
-  const retry = () => {
-    attempts++;
-    if (attempts > retries) {
-      console.error('Server did not become ready in time.');
-      // Optionally, handle the failure here (e.g., exit or show an error message)
-    } else {
-      setTimeout(checkServer, interval);
-    }
-  };
-
-  checkServer();
-}
-
-// Create the Electron window and load the Next.js app
 function createWindow() {
-  const win = new BrowserWindow({
-    width: 1024,
-    height: 768,
+  // Create the main browser window.
+  mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 800,
     webPreferences: {
-      // For security, disable Node integration in the renderer
-      nodeIntegration: false,
-      contextIsolation: true,
+      nodeIntegration: true,
     },
   });
-  win.maximize();
 
-  // Uncomment to debug if needed
-  // win.webContents.openDevTools();
+  // Development: load http://localhost:3000
+  if (isDev) {
+    mainWindow.loadURL("http://localhost:3000");
+  } else {
+    // Production: run "npm run start" to serve Next.js on port 3000
+    // Then load http://localhost:3000 in the window.
 
-  win.loadURL(`http://localhost:${port}`);
+    // Start the Next.js server on port 3000
+    serverProcess = exec("npm run start", { cwd: __dirname }, (error, stdout, stderr) => {
+      if (error) {
+        console.error("Next.js server error:", error);
+      }
+      if (stdout) console.log("Next.js server stdout:", stdout);
+      if (stderr) console.error("Next.js server stderr:", stderr);
+    });
+
+    // Immediately load http://localhost:3000
+    // (We’re not waiting for Next.js to finish booting, so the user might see a white screen for a second or two)
+    mainWindow.loadURL("http://localhost:3000");
+  }
 }
 
-app.whenReady().then(() => {
-  startNextServer();
-  waitForServer(`http://localhost:${port}`, createWindow);
+app.on("ready", createWindow);
+
+app.on("window-all-closed", () => {
+  // Kill the Next.js server process if it's still running
+  if (serverProcess) {
+    serverProcess.kill();
+  }
+  // Quit if not on macOS
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
 
-app.on('window-all-closed', () => {
-  // Kill the Next.js server if running, then quit
-  if (nextServer) nextServer.kill();
-  if (process.platform !== 'darwin') {
-    app.quit();
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
   }
 });
