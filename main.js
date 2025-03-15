@@ -1,18 +1,20 @@
+// main.js
 const { app, BrowserWindow } = require("electron");
 const { spawn } = require("child_process");
 const path = require("path");
 const http = require("http");
-const fs = require("fs");
 
+// Check environment to see if we're in development mode.
 const isDev = process.env.NODE_ENV === "development";
 
 let mainWindow;
 let serverProcess;
 
-// Poll the server until it's up
+// Polls the provided URL until a successful response is received.
 function waitForServer(url, interval = 500, timeout = 15000) {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
+
     function check() {
       http
         .get(url, (res) => {
@@ -32,6 +34,7 @@ function waitForServer(url, interval = 500, timeout = 15000) {
           }
         });
     }
+
     check();
   });
 }
@@ -41,26 +44,27 @@ function createWindow() {
     width: 1280,
     height: 800,
     webPreferences: {
-      nodeIntegration: false, // for security
+      // Disable Node.js integration in the renderer for security
+      nodeIntegration: false,
     },
   });
 
   if (isDev) {
-    // In dev mode, just load the dev server
+    // In development, just load the Next.js dev server at localhost:3000
     mainWindow.loadURL("http://localhost:3000");
   } else {
-    // 1. Path to the local Next CLI in node_modules
-    //    (after packaging, asar must be disabled or unpacked)
-    const nextBin = path.join(__dirname, "node_modules", ".bin", "next");
+    // In production, spawn Next.js using the Electron-provided Node binary
 
-    // Debug check: see if nextBin exists
-    console.log("Looking for Next CLI at:", nextBin);
-    console.log("Exists?", fs.existsSync(nextBin));
+    // 1. Path to Electron's built-in Node binary:
+    const nodeBinary = process.execPath;
 
-    // 2. Spawn "next start" with no shell
-    serverProcess = spawn(nextBin, ["start"], {
-      cwd: __dirname,  // The working directory
-      shell: false,    // Don't use cmd.exe or any shell
+    // 2. Path to the Next CLI (installed in your node_modules)
+    const nextCli = path.join(__dirname, "node_modules", "next", "dist", "bin", "next");
+
+    // 3. Spawn "next start" directly with no shell
+    serverProcess = spawn(nodeBinary, [nextCli, "start"], {
+      cwd: __dirname,
+      shell: false, // no cmd.exe, so no ENOENT
     });
 
     serverProcess.stdout.on("data", (data) => {
@@ -75,7 +79,7 @@ function createWindow() {
       console.log(`Next.js process exited with code ${code}`);
     });
 
-    // 3. Wait for the server to be ready before loading the window
+    // Wait for Next.js to respond on http://localhost:3000 before loading
     waitForServer("http://localhost:3000")
       .then(() => {
         mainWindow.loadURL("http://localhost:3000");
@@ -87,14 +91,17 @@ function createWindow() {
   }
 }
 
+// Create the main window when Electron is ready
 app.on("ready", createWindow);
 
+// Gracefully kill the Next.js server when the app quits
 app.on("quit", () => {
   if (serverProcess) {
     serverProcess.kill();
   }
 });
 
+// Also kill the server if all windows are closed (except on macOS)
 app.on("window-all-closed", () => {
   if (serverProcess) {
     serverProcess.kill();
