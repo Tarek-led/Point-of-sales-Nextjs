@@ -1,54 +1,104 @@
 const { app, BrowserWindow } = require("electron");
-const { exec } = require("child_process");
+const { spawn } = require("child_process");
 const path = require("path");
+const http = require("http");
+const fs = require("fs");
 
-// If you used to do "require('electron-is-dev')", you can add it back,
-// but let's keep it even simpler by checking NODE_ENV.
 const isDev = process.env.NODE_ENV === "development";
 
 let mainWindow;
 let serverProcess;
 
+// Poll the server until it's up
+function waitForServer(url, interval = 500, timeout = 15000) {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    function check() {
+      http
+        .get(url, (res) => {
+          if (res.statusCode === 200) {
+            resolve();
+          } else if (Date.now() - startTime > timeout) {
+            reject(new Error("Timeout waiting for server"));
+          } else {
+            setTimeout(check, interval);
+          }
+        })
+        .on("error", () => {
+          if (Date.now() - startTime > timeout) {
+            reject(new Error("Timeout waiting for server"));
+          } else {
+            setTimeout(check, interval);
+          }
+        });
+    }
+    check();
+  });
+}
+
 function createWindow() {
-  // Create the main browser window.
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     webPreferences: {
-      nodeIntegration: true,
+      nodeIntegration: false, // for security
     },
   });
 
-  // Development: load http://localhost:3000
   if (isDev) {
+    // In dev mode, just load the dev server
     mainWindow.loadURL("http://localhost:3000");
   } else {
-    // Production: run "npm run start" to serve Next.js on port 3000
-    // Then load http://localhost:3000 in the window.
+    // 1. Path to the local Next CLI in node_modules
+    //    (after packaging, asar must be disabled or unpacked)
+    const nextBin = path.join(__dirname, "node_modules", ".bin", "next");
 
-    // Start the Next.js server on port 3000
-    serverProcess = exec("npm run start", { cwd: __dirname }, (error, stdout, stderr) => {
-      if (error) {
-        console.error("Next.js server error:", error);
-      }
-      if (stdout) console.log("Next.js server stdout:", stdout);
-      if (stderr) console.error("Next.js server stderr:", stderr);
+    // Debug check: see if nextBin exists
+    console.log("Looking for Next CLI at:", nextBin);
+    console.log("Exists?", fs.existsSync(nextBin));
+
+    // 2. Spawn "next start" with no shell
+    serverProcess = spawn(nextBin, ["start"], {
+      cwd: __dirname,  // The working directory
+      shell: false,    // Don't use cmd.exe or any shell
     });
 
-    // Immediately load http://localhost:3000
-    // (We’re not waiting for Next.js to finish booting, so the user might see a white screen for a second or two)
-    mainWindow.loadURL("http://localhost:3000");
+    serverProcess.stdout.on("data", (data) => {
+      console.log("Next.js stdout:", data.toString());
+    });
+
+    serverProcess.stderr.on("data", (data) => {
+      console.error("Next.js stderr:", data.toString());
+    });
+
+    serverProcess.on("close", (code) => {
+      console.log(`Next.js process exited with code ${code}`);
+    });
+
+    // 3. Wait for the server to be ready before loading the window
+    waitForServer("http://localhost:3000")
+      .then(() => {
+        mainWindow.loadURL("http://localhost:3000");
+      })
+      .catch((err) => {
+        console.error("Error waiting for Next.js server:", err);
+        mainWindow.loadURL("data:text/html,<h1>Error starting Next.js server</h1>");
+      });
   }
 }
 
 app.on("ready", createWindow);
 
-app.on("window-all-closed", () => {
-  // Kill the Next.js server process if it's still running
+app.on("quit", () => {
   if (serverProcess) {
     serverProcess.kill();
   }
-  // Quit if not on macOS
+});
+
+app.on("window-all-closed", () => {
+  if (serverProcess) {
+    serverProcess.kill();
+  }
   if (process.platform !== "darwin") {
     app.quit();
   }
