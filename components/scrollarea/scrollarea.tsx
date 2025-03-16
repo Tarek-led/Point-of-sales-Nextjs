@@ -40,7 +40,7 @@ export function ScrollAreaDemo() {
       >
         <LineChart className="mr-2 h-4 w-4" />
         {/* Toggle button text based on visibility */}
-        {isScrollAreaVisible ? 'Hide Charts Menu' : 'Show Charts Menu'}
+        {isScrollAreaVisible ? 'Hide Reports Menu' : 'Show Reports Menu'}
       </Button>
       {/* Render scroll area if visible */}
       {isScrollAreaVisible && (
