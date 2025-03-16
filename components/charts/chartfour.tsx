@@ -6,7 +6,6 @@ import axios from 'axios';
 import { Input } from '@/components/ui/input';
 import { initialChartfourOptions } from '@/lib/charts';
 
-// Dynamically import ReactApexChart with SSR disabled
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
   ssr: false,
 });
@@ -19,18 +18,14 @@ interface ChartOneState {
   options: ApexOptions;
 }
 
-// Get today's date
+// Calculate default dates: past one month until today
 const today = new Date();
-
-// Calculate one week from today
-const oneWeekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-// Format dates as yyyy-mm-dd strings
-const startDateString = today.toISOString().split('T')[0];
-const endDateString = oneWeekFromNow.toISOString().split('T')[0];
+const lastMonth = new Date();
+lastMonth.setMonth(today.getMonth() - 1);
+const defaultEndDate = today.toISOString().split('T')[0];
+const defaultStartDate = lastMonth.toISOString().split('T')[0];
 
 const ChartFour: React.FC = () => {
-  // State for chart data and date range
   const [dataChart, setDataChart] = useState<{
     [date: string]: {
       netIncome: number;
@@ -38,10 +33,9 @@ const ChartFour: React.FC = () => {
       grossIncomeWithTax: number;
     };
   }>({});
-  const [startDate, setStartDate] = useState<string>('2024-05-01');
-  const [endDate, setEndDate] = useState<string>('2024-05-15');
+  const [startDate, setStartDate] = useState<string>(defaultStartDate);
+  const [endDate, setEndDate] = useState<string>(defaultEndDate);
 
-  // State for the chart options and series
   const [state, setState] = useState<ChartOneState>({
     series: [
       {
@@ -60,19 +54,18 @@ const ChartFour: React.FC = () => {
     options: initialChartfourOptions,
   });
 
-  // Function to generate an array of dates within a range
   const generateDateRange = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+    const startDateObj = new Date(start);
+    const endDateObj = new Date(end);
     const dateArray: string[] = [];
-    let currentDate = startDate;
+    let currentDate = startDateObj;
 
     const isSameMonth =
-      startDate.getFullYear() === endDate.getFullYear() &&
-      startDate.getMonth() === endDate.getMonth();
-    const isSameYear = startDate.getFullYear() === endDate.getFullYear();
+      startDateObj.getFullYear() === endDateObj.getFullYear() &&
+      startDateObj.getMonth() === endDateObj.getMonth();
+    const isSameYear = startDateObj.getFullYear() === endDateObj.getFullYear();
 
-    while (currentDate <= endDate) {
+    while (currentDate <= endDateObj) {
       let formattedDate: string;
 
       if (!isSameYear) {
@@ -103,7 +96,6 @@ const ChartFour: React.FC = () => {
     return dateArray;
   };
 
-  // Update chart categories when start or end date changes
   useEffect(() => {
     const newCategories = generateDateRange(startDate, endDate);
 
@@ -119,13 +111,11 @@ const ChartFour: React.FC = () => {
     }));
   }, [startDate, endDate]);
 
-  // Wrap fetchData in useCallback
   const fetchData = useCallback(async () => {
     try {
       const response = await axios.get(
         `/api/profit?start=${startDate}&end=${endDate}`
       );
-      // Convert array data to object format
       const formattedData = response.data.groupedData.reduce(
         (
           acc: {
@@ -158,12 +148,10 @@ const ChartFour: React.FC = () => {
     }
   }, [startDate, endDate]);
 
-  // Fetch data when startDate or endDate changes
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Update state when dataChart changes
   useEffect(() => {
     if (Object.keys(dataChart).length > 0) {
       const netIncomeData = Object.values(dataChart).map((entry) =>
@@ -206,50 +194,50 @@ const ChartFour: React.FC = () => {
 
   return (
     <div className="h-full w-full col-span-12 rounded-sm border border-stroke bg-white px-5 pb-5 pt-[1.875rem] shadow-de dark:border-strokedark dark:bg-chartbody sm:px-[1.875rem] xl:col-span-8">
-      <div className="flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap">
-        <div className="flex w-full flex-wrap gap-3 sm:gap-5">
-          <div className="flex min-w-[11.875rem]">
-            <div className="w-full">
-              <p className="font-semibold text-[#3f4]">Income</p>
-              <div className="flex gap-4">
-                <div className="flex gap-4 items-center">
-                  <label className="mr-2 text-sm">Start</label>
-                  <div>
-                    <Input
-                      className="h-8"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-4 items-center">
-                  <label className="mr-2">End</label>
-                  <div>
-                    <Input
-                      className="h-8"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
-                  </div>
-                </div>
+      {/* Header with vertical line decoration and date inputs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:flex-nowrap mb-4">
+        <div className="flex min-w-[11.875rem] items-center">
+          <div className="mr-2 mt-1 w-px h-4 bg-secondarychart"></div>
+          <div className="w-full">
+            <p className="font-semibold text-secondarychart">Income</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3 sm:gap-5">
+          <div className="flex min-w-[11.875rem] items-center">
+            <div className="flex gap-4 items-center">
+              <label className="mr-2 text-sm">Start</label>
+              <div>
+                <Input
+                  className="h-8"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex gap-4 items-center ml-4">
+              <label className="mr-2">End</label>
+              <div>
+                <Input
+                  className="h-8"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div>
-        <div id="chartOne" className="-ml-5">
-          <ReactApexChart
-            options={state.options}
-            series={state.series}
-            type="line"
-            height={420}
-            width={'100%'}
-          />
-        </div>
+      <div id="chartFour" className="-ml-5">
+        <ReactApexChart
+          options={state.options}
+          series={state.series}
+          type="line"
+          height={420}
+          width="100%"
+        />
       </div>
     </div>
   );

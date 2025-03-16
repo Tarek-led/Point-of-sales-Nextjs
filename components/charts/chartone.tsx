@@ -19,22 +19,19 @@ interface ChartOneState {
   options: ApexOptions;
 }
 
-// Get today's date
+// Calculate default dates: past one month until today
 const today = new Date();
-
-// Calculate one week from today
-const oneWeekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-// Format dates as yyyy-mm-dd strings
-const startDateString = today.toISOString().split('T')[0];
-const endDateString = oneWeekFromNow.toISOString().split('T')[0];
+const lastMonth = new Date();
+lastMonth.setMonth(today.getMonth() - 1);
+const defaultEndDate = today.toISOString().split('T')[0];
+const defaultStartDate = lastMonth.toISOString().split('T')[0];
 
 const ChartOne: React.FC = () => {
   // State for chart data
   const [dataChart, setDataChart] = useState<number[]>([]);
-  // State for start and end dates
-  const [startDate, setStartDate] = useState<string>('2024-05-01');
-  const [endDate, setEndDate] = useState<string>('2024-05-15');
+  // Set start and end dates using the dynamic default values
+  const [startDate, setStartDate] = useState<string>(defaultStartDate);
+  const [endDate, setEndDate] = useState<string>(defaultEndDate);
 
   // State for chart options and series
   const [state, setState] = useState<ChartOneState>({
@@ -49,19 +46,19 @@ const ChartOne: React.FC = () => {
 
   // Function to generate an array of date strings between start and end dates
   const generateDateRange = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+    const startDateObj = new Date(start);
+    const endDateObj = new Date(end);
     const dateArray: string[] = [];
-    let currentDate = startDate;
+    let currentDate = startDateObj;
 
     // Check if dates are in the same month and year
     const isSameMonth =
-      startDate.getFullYear() === endDate.getFullYear() &&
-      startDate.getMonth() === endDate.getMonth();
-    const isSameYear = startDate.getFullYear() === endDate.getFullYear();
+      startDateObj.getFullYear() === endDateObj.getFullYear() &&
+      startDateObj.getMonth() === endDateObj.getMonth();
+    const isSameYear = startDateObj.getFullYear() === endDateObj.getFullYear();
 
     // Generate date strings based on conditions
-    while (currentDate <= endDate) {
+    while (currentDate <= endDateObj) {
       let formattedDate: string;
 
       if (!isSameYear) {

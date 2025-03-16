@@ -18,7 +18,6 @@ interface ChartThreeState {
   options: ApexOptions;
 }
 
-// Define Product and TopProductResponse types
 type Product = {
   name: string;
 };
@@ -36,17 +35,9 @@ type TopProductResponse = {
 };
 
 const ChartThree: React.FC = () => {
-  // State to store the top products data
-  const [topProducts, setTopProducts] = useState<
-    TopProductResponse['topProducts']
-  >([]);
-  // State to manage loading status
+  const [topProducts, setTopProducts] = useState<TopProductResponse['topProducts']>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  // State to store any error messages
   const [error, setError] = useState<string | null>(null);
-  // State to store the total quantity of products sold
-  const [totalQuantity, setTotalQuantity] = useState<number>(0);
-  // State to manage the chart options and series data
   const [state, setState] = useState<ChartThreeState>({
     series: [
       {
@@ -57,30 +48,21 @@ const ChartThree: React.FC = () => {
     options: initialChartThreeOptions,
   });
 
-  // useEffect to fetch top products data from the API
   useEffect(() => {
     const fetchTopProducts = async () => {
       try {
-        // Fetch data from the API endpoint
         const response = await axios.get<TopProductResponse>('/api/favorite');
-        // Store the top products data in state
-        setTopProducts(response.data.topProducts);
-        // Store the total quantity in state
-        setTotalQuantity(response.data.totalQuantity);
+        const { topProducts } = response.data;
+        setTopProducts(topProducts);
 
-        // Map the quantities to a new array for chart data
-        const newData = response.data.topProducts.map(
+        const newData = topProducts.map(
           (product) => product._sum.quantity
         );
-        // Map the product names to a new array for chart categories
-        const newCategories = response.data.topProducts.map(
+        const newCategories = topProducts.map(
           (product) => product.productstock.name
         );
-
-        // Calculate the maximum quantity for the y-axis and add 1
         const maxQuantity = Math.max(...newData) + 1;
 
-        // Update the chart state with the new data and categories
         setState((prevState) => ({
           ...prevState,
           series: [
@@ -101,39 +83,36 @@ const ChartThree: React.FC = () => {
             },
           },
         }));
-      } catch (error: any) {
-        // Set error message if the API call fails
-        setError(error.message);
+      } catch (err: any) {
+        setError(err.message);
       } finally {
-        // Set loading to false once the API call is complete
         setLoading(false);
       }
     };
 
-    // Call the fetchTopProducts function
     fetchTopProducts();
   }, []);
 
   return (
     <div className="h-full w-full col-span-12 rounded-sm border border-stroke bg-white px-5 pb-5 pt-[1.875rem] shadow-de dark:border-strokedark dark:bg-chartbody sm:px-[1.875rem] xl:col-span-8">
-      <div className="mb-4 justify-between gap-4 sm:flex">
-        <div>
-          <h4 className="text-xl font-semibold text-black dark:text-white">
-            Top 5 Favorite Product
-          </h4>
+      {/* Header with vertical line decoration */}
+      <div className="flex items-center mb-4">
+        <div className="flex min-w-[11.875rem] items-center">
+          <div className="mr-2 mt-1 w-px h-4 bg-secondarychart"></div>
+          <div className="w-full">
+            <p className="font-semibold text-secondarychart">Top 5 Favorite Products</p>
+          </div>
         </div>
       </div>
 
-      <div>
-        <div id="chartThree" className="-mb-9 -ml-5">
-          <ReactApexChart
-            options={state.options}
-            series={state.series}
-            type="bar"
-            height={450}
-            width={'100%'}
-          />
-        </div>
+      <div id="chartThree" className="-ml-5">
+        <ReactApexChart
+          options={state.options}
+          series={state.series}
+          type="bar"
+          height={450}
+          width="100%"
+        />
       </div>
     </div>
   );
