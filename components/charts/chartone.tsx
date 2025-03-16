@@ -5,11 +5,19 @@ import dynamic from 'next/dynamic';
 import axios from 'axios';
 import { Input } from '@/components/ui/input';
 import { initialChartoneOptions } from '@/lib/charts';
+import Modal from '@/components/graphModal/Modal';
 
 // Dynamically import ReactApexChart for client-side rendering only
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
   ssr: false,
 });
+
+// Calculate default dates: past one month until today
+const today = new Date();
+const lastMonth = new Date();
+lastMonth.setMonth(today.getMonth() - 1);
+const defaultEndDate = today.toISOString().split('T')[0];
+const defaultStartDate = lastMonth.toISOString().split('T')[0];
 
 interface ChartOneState {
   series: {
@@ -19,193 +27,116 @@ interface ChartOneState {
   options: ApexOptions;
 }
 
-// Calculate default dates: past one month until today
-const today = new Date();
-const lastMonth = new Date();
-lastMonth.setMonth(today.getMonth() - 1);
-const defaultEndDate = today.toISOString().split('T')[0];
-const defaultStartDate = lastMonth.toISOString().split('T')[0];
-
 const ChartOne: React.FC = () => {
-  // State for chart data
   const [dataChart, setDataChart] = useState<number[]>([]);
-  // Set start and end dates using the dynamic default values
   const [startDate, setStartDate] = useState<string>(defaultStartDate);
   const [endDate, setEndDate] = useState<string>(defaultEndDate);
-
-  // State for chart options and series
   const [state, setState] = useState<ChartOneState>({
-    series: [
-      {
-        name: 'Products Sales',
-        data: [],
-      },
-    ],
+    series: [{ name: 'Products Sales', data: [] }],
     options: initialChartoneOptions,
   });
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
-  // Function to generate an array of date strings between start and end dates
+  // Use your existing function to generate full date range (full month)
   const generateDateRange = (start: string, end: string) => {
     const startDateObj = new Date(start);
     const endDateObj = new Date(end);
     const dateArray: string[] = [];
     let currentDate = startDateObj;
-
-    // Check if dates are in the same month and year
-    const isSameMonth =
-      startDateObj.getFullYear() === endDateObj.getFullYear() &&
-      startDateObj.getMonth() === endDateObj.getMonth();
-    const isSameYear = startDateObj.getFullYear() === endDateObj.getFullYear();
-
-    // Generate date strings based on conditions
     while (currentDate <= endDateObj) {
-      let formattedDate: string;
-
-      if (!isSameYear) {
-        formattedDate = currentDate.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-        });
-      } else if (!isSameMonth) {
-        formattedDate = currentDate.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        });
-      } else {
-        formattedDate = currentDate.toLocaleDateString('en-US', {
+      dateArray.push(
+        currentDate.toLocaleDateString('en-US', {
           month: 'long',
           day: 'numeric',
-        });
-      }
-
-      if (!dateArray.includes(formattedDate)) {
-        dateArray.push(formattedDate);
-      }
-
+        })
+      );
       currentDate.setDate(currentDate.getDate() + 1);
     }
-
     return dateArray;
   };
 
-  // Update chart x-axis categories when startDate or endDate changes
+  // Update full chart options when the date range changes
   useEffect(() => {
     const newCategories = generateDateRange(startDate, endDate);
-
     setState((prevState) => ({
       ...prevState,
-      options: {
-        ...prevState.options,
-        xaxis: {
-          ...prevState.options.xaxis,
-          categories: newCategories,
-        },
-      },
+      options: { ...prevState.options, xaxis: { ...prevState.options.xaxis, categories: newCategories } },
     }));
   }, [startDate, endDate]);
 
-  // Wrap fetchData in useCallback so it can be included in the dependency array
+  // Fetch data for the full date range
   const fetchData = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `/api/productsale?start=${startDate}&end=${endDate}`
-      );
+      const response = await axios.get(`/api/productsale?start=${startDate}&end=${endDate}`);
       const { combinedResult } = response.data;
-
-      // Assuming combinedResult is an array of objects with totalQuantity field
-      const chartData = combinedResult.map(
-        (item: { totalQuantity: number }) => item.totalQuantity
-      );
-
+      const chartData = combinedResult.map((item: { totalQuantity: number }) => item.totalQuantity);
       setDataChart(chartData);
     } catch (error) {
       console.error('Error fetching data', error);
     }
   }, [startDate, endDate]);
 
-  // Fetch data when fetchData changes
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Update chart series data when dataChart changes
+  // Update full chart series when data changes
   useEffect(() => {
     if (dataChart.length > 0) {
       const maxChartData = Math.max(...dataChart) + 1;
-
       setState((prevState) => ({
         ...prevState,
-        series: [
-          {
-            ...prevState.series[0],
-            data: dataChart,
-          },
-        ],
-        options: {
-          ...prevState.options,
-          yaxis: {
-            ...prevState.options.yaxis,
-            max: maxChartData,
-          },
-        },
+        series: [{ ...prevState.series[0], data: dataChart }],
+        options: { ...prevState.options, yaxis: { ...prevState.options.yaxis, max: maxChartData } },
       }));
     }
   }, [dataChart]);
 
+  // Derive preview options & series (only showing last 5 days)
+  const previewCategories =
+    state.options.xaxis && Array.isArray(state.options.xaxis.categories)
+      ? state.options.xaxis.categories.slice(-5)
+      : [];
+  const previewOptions: ApexOptions = {
+    ...state.options,
+    xaxis: { ...state.options.xaxis, categories: previewCategories },
+  };
+  const previewSeries = state.series.map((s) => ({ ...s, data: s.data.slice(-5) }));
+
   return (
-    <div className="h-full w-full col-span-12 rounded-sm border border-stroke bg-white px-5 pb-5 pt-[1.875rem] shadow-de dark:border-strokedark dark:bg-chartbody sm:px-[1.875rem] xl:col-span-8">
-      <div className="flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap">
-        <div className="flex w-full flex-wrap gap-3 sm:gap-5">
-          <div className="flex min-w-[11.875rem]">
-            <span className="mr-2 mt-1 flex h-4 w-full max-w-4 items-center justify-center rounded-full border border-secondarychart">
-              <span className="block h-2.5 w-full max-w-2.5 rounded-full bg-secondarychart"></span>
-            </span>
-            <div className="w-full">
-              <p className="font-semibold text-secondarychart">
-                Total Products Sales
-              </p>
-              <div className="flex gap-4">
-                <div className="flex gap-4 items-center">
-                  <label className="mr-2 text-sm">Start</label>
-                  <div>
-                    <Input
-                      className="h-8"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-4 items-center">
-                  <label className="mr-2">End</label>
-                  <div>
-                    <Input
-                      className="h-8"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+    <>
+      {/* Preview Card */}
+      <div
+        onClick={() => setIsModalOpen(true)}
+        className="cursor-pointer h-64 rounded-sm border border-stroke bg-white p-4 shadow-de dark:border-strokedark dark:bg-chartbody"
+      >
+        <p className="font-semibold text-secondarychart mb-2">Total Products Sales</p>
+        <div className="h-full">
+          <ReactApexChart options={previewOptions} series={previewSeries} type="area" height={150} width="100%" />
         </div>
       </div>
 
-      <div>
-        <div id="chartOne" className="-ml-5">
-          <ReactApexChart
-            options={state.options}
-            series={state.series}
-            type="area"
-            height={420}
-            width={'100%'}
-          />
+      {/* Modal for Full Chart */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <div className="mb-4">
+          <h4 className="text-xl font-semibold text-black dark:text-white">Total Products Sales</h4>
         </div>
-      </div>
-    </div>
+        {/* Full chart view with date inputs */}
+        <div className="mb-4 flex gap-4">
+          <div className="flex items-center">
+            <label className="mr-2 text-sm">Start</label>
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8" />
+          </div>
+          <div className="flex items-center">
+            <label className="mr-2 text-sm">End</label>
+            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-8" />
+          </div>
+        </div>
+        <div>
+          <ReactApexChart options={state.options} series={state.series} type="area" height={420} width="100%" />
+        </div>
+      </Modal>
+    </>
   );
 };
 
