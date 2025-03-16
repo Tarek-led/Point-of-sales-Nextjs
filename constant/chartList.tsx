@@ -1,4 +1,5 @@
-import { Activity, Crown, HandCoins } from 'lucide-react';
+// constant/chartList.tsx
+import { Activity, Crown, HandCoins, FileText } from 'lucide-react';
 import { NavItem } from '@/types/Navbar';
 
 export const SCROLLBAR_ITEMS: NavItem[] = [
@@ -16,5 +17,10 @@ export const SCROLLBAR_ITEMS: NavItem[] = [
     title: 'Income',
     path: '/analytics/income',
     icon: <HandCoins className="h-4 w-4" />,
+  },
+  {
+    title: 'Daily Reports',
+    path: '/analytics/reports',
+    icon: <FileText className="h-4 w-4" />,
   },
 ];
