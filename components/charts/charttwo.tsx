@@ -3,190 +3,227 @@ import { ApexOptions } from 'apexcharts';
 import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
+import Modal from '@/components/graphModal/Modal';
 import { Input } from '@/components/ui/input';
-import { initialChartoneOptions } from '@/lib/charts';
 
-const ReactApexChart = dynamic(() => import('react-apexcharts'), {
-  ssr: false,
-});
+const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
-interface ChartTwoState {
-  series: {
-    name: string;
-    data: number[];
-  }[];
-  options: ApexOptions;
+const today = new Date();
+const lastMonth = new Date();
+lastMonth.setMonth(today.getMonth() - 1);
+const defaultEndDate = today.toISOString().split('T')[0];
+const defaultStartDate = lastMonth.toISOString().split('T')[0];
+
+interface CategorySeries {
+  name: string;
+  data: number[];
 }
 
-const ChartTwo: React.FC = () => {
-  const [dataChart, setDataChart] = useState<number[]>([]);
-  const [dataChartWithoutTax, setDataChartWithoutTax] = useState<number[]>([]);
-  const [startDate, setStartDate] = useState<string>('2024-05-01');
-  const [endDate, setEndDate] = useState<string>('2024-05-15');
+interface ChartState {
+  series: CategorySeries[];
+  options: ApexOptions;
+  totalBySeries: { name: string; total: number }[];
+}
 
-  const [state, setState] = useState<ChartTwoState>({
-    series: [
-      {
-        name: 'Gross Income',
-        data: [],
+const ChartCategory: React.FC = () => {
+  const [startDate, setStartDate] = useState<string>(defaultStartDate);
+  const [endDate, setEndDate] = useState<string>(defaultEndDate);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [totalBySeries, setTotalBySeries] = useState<{ name: string; total: number }[]>([]);
+
+  const [state, setState] = useState<ChartState>({
+    series: [],
+    options: {
+      chart: {
+        type: 'donut',
+        toolbar: { show: false },
       },
-    ],
-    options: initialChartoneOptions,
+      colors: ['#3C50E0', '#6577F3', '#8FD0EF', '#0FADCF', '#80CAEE', '#4ADE80', '#F43F5E', '#FBBF24'],
+      labels: [], // Always initialized as an array
+      legend: { show: false, position: 'bottom' },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '65%',
+            background: 'transparent',
+          },
+        },
+      },
+      dataLabels: { enabled: false },
+      responsive: [
+        { breakpoint: 2600, options: { chart: { width: 380 } } },
+        { breakpoint: 640, options: { chart: { width: 200 } } },
+      ],
+    },
+    totalBySeries: [],
   });
 
-  const generateDateRange = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const dateArray: string[] = [];
-    let currentDate = startDate;
-
-    const isSameMonth =
-      startDate.getFullYear() === endDate.getFullYear() &&
-      startDate.getMonth() === endDate.getMonth();
-    const isSameYear = startDate.getFullYear() === endDate.getFullYear();
-
-    while (currentDate <= endDate) {
-      let formattedDate: string;
-
-      if (!isSameYear) {
-        formattedDate = currentDate.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-        });
-      } else if (!isSameMonth) {
-        formattedDate = currentDate.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        });
-      } else {
-        formattedDate = currentDate.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-        });
-      }
-
-      if (!dateArray.includes(formattedDate)) {
-        dateArray.push(formattedDate);
-      }
-
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    return dateArray;
+  const calculateTotals = (seriesData: CategorySeries[]) => {
+    return seriesData.map((serie) => ({
+      name: serie.name,
+      total: serie.data.reduce((sum, current) => sum + (Number.isFinite(current) ? current : 0), 0),
+    }));
   };
 
-  useEffect(() => {
-    const newCategories = generateDateRange(startDate, endDate);
-
-    setState((prevState) => ({
-      ...prevState,
-      options: {
-        ...prevState.options,
-        xaxis: {
-          ...prevState.options.xaxis,
-          categories: newCategories,
-        },
-      },
-    }));
-  }, [startDate, endDate]);
-
-  // Wrap fetchData in useCallback
-  const fetchData = useCallback(async () => {
+  const fetchCategorySales = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `/api/chart/income?start=${startDate}&end=${endDate}`
-      );
-      const { combinedResult } = response.data;
+      setLoading(true);
+      const response = await axios.get(`/api/sales-by-category?start=${startDate}&end=${endDate}`);
+      const { series } = response.data;
 
-      const chartData = combinedResult.map(
-        (item: { totalIncome: number }) => item.totalIncome
-      );
+      const newTotalBySeries = series && Array.isArray(series) && series.length > 0 ? calculateTotals(series) : [];
+      newTotalBySeries.sort((a, b) => b.total - a.total);
+      setTotalBySeries(newTotalBySeries);
 
-      setDataChart(chartData);
-    } catch (error) {
-      console.error('Error fetching data', error);
+      const labels = newTotalBySeries.map((item) => item.name);
+      setState((prev) => ({
+        ...prev,
+        series: series || [],
+        options: { ...prev.options, labels },
+        totalBySeries: newTotalBySeries,
+      }));
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error fetching category sales data:', err);
+      setTotalBySeries([]);
+      setState((prev) => ({
+        ...prev,
+        series: [],
+        options: { ...prev.options, labels: [] },
+        totalBySeries: [],
+      }));
+    } finally {
+      setLoading(false);
     }
   }, [startDate, endDate]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchCategorySales();
+  }, [fetchCategorySales]);
 
-  // Update state when dataChart changes
-  useEffect(() => {
-    if (dataChart.length > 0) {
-      const maxChartData = Math.max(...dataChart) + 1;
-
-      setState((prevState) => ({
-        ...prevState,
-        series: [
-          {
-            ...prevState.series[0],
-            data: dataChart,
-          },
-        ],
-        options: {
-          ...prevState.options,
-          yaxis: {
-            ...prevState.options.yaxis,
-            max: maxChartData,
-          },
-        },
-      }));
+  const renderLegendItems = () => {
+    if (!totalBySeries.length) {
+      return <div className="text-sm text-gray-500">No data available</div>;
     }
-  }, [dataChart]);
+    return totalBySeries.map((item, index) => (
+      <div key={`legend-${index}`} className="flex items-center mb-2">
+        <span
+          className="inline-block w-3 h-3 mr-2 rounded-full"
+          style={{ backgroundColor: state.options.colors?.[index % (state.options.colors?.length || 1)] }}
+        ></span>
+        <span className="text-sm">{item.name}</span>
+        <span className="ml-auto font-medium">{item.total.toLocaleString()}</span>
+      </div>
+    ));
+  };
+
+  const pieChartSeries = totalBySeries.map((item) => item.total);
+  // Use type assertion or optional chaining to satisfy TypeScript
+  const hasData = pieChartSeries.length > 0 && (state.options.labels?.length || 0) > 0;
+
+  if (loading && !hasData) {
+    return (
+      <div className="h-64 rounded-sm border border-stroke bg-white p-4 shadow-de dark:border-strokedark dark:bg-chartbody flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full w-full col-span-12 rounded-sm border border-stroke bg-white px-5 pb-5 pt-[1.875rem] shadow-de dark:border-strokedark dark:bg-chartbody sm:px-[1.875rem] xl:col-span-8">
-      <div className="flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap">
-        <div className="flex w-full flex-wrap gap-3 sm:gap-5">
-          <div className="flex min-w-[11.875rem]">
-            <span className="mr-2 mt-1 flex h-4 w-full max-w-4 items-center justify-center rounded-full border border-secondarychart">
-              <span className="block h-2.5 w-full max-w-2.5 rounded-full bg-secondarychart"></span>
-            </span>
-            <div className="w-full">
-              <p className="font-semibold text-secondarychart">Total Income</p>
-              <div className="flex gap-4">
-                <div className="flex gap-4 items-center">
-                  <label className="mr-2 text-sm">Start</label>
-                  <div>
-                    <Input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-4 items-center">
-                  <label className="mr-2">End</label>
-                  <div>
-                    <Input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
-                  </div>
-                </div>
+    <>
+      {/* Preview Card */}
+      <div
+        onClick={() => setIsModalOpen(true)}
+        className="cursor-pointer h-64 rounded-sm border border-stroke bg-white p-4 shadow-de dark:border-strokedark dark:bg-chartbody"
+      >
+        <p className="font-semibold text-secondarychart mb-2">Sales by Category</p>
+        {hasData ? (
+          <div className="flex h-full">
+            <div className="w-1/2">
+              <ReactApexChart
+                options={state.options}
+                series={pieChartSeries}
+                type="donut"
+                height={150}
+                width="100%"
+              />
+            </div>
+            <div className="w-1/2 pl-2 overflow-y-auto">{renderLegendItems()}</div>
+          </div>
+        ) : (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-gray-500">No data available for selected period</p>
+          </div>
+        )}
+      </div>
+
+      {/* Modal for Full Chart */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <div className="mb-4">
+          <h4 className="text-xl font-semibold text-black dark:text-white">Sales by Category</h4>
+        </div>
+
+        <div className="mb-4 flex gap-4">
+          <div className="flex items-center">
+            <label className="mr-2 text-sm">Start</label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="h-8"
+            />
+          </div>
+          <div className="flex items-center">
+            <label className="mr-2 text-sm">End</label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="h-8"
+            />
+          </div>
+        </div>
+
+        {hasData ? (
+          <div className="flex flex-col md:flex-row">
+            <div className="md:w-1/2">
+              <ReactApexChart
+                options={{ ...state.options, legend: { ...state.options.legend, show: false } }}
+                series={pieChartSeries}
+                type="donut"
+                height={350}
+                width="100%"
+              />
+            </div>
+            <div className="md:w-1/2 overflow-y-auto px-4 max-h-80">
+              <h5 className="text-lg font-medium mb-3">Categories</h5>
+              {renderLegendItems()}
+              <div className="mt-6">
+                <h5 className="text-lg font-medium mb-3">Summary</h5>
+                <p className="mb-2">
+                  <span className="font-medium">Total Sales: </span>
+                  {pieChartSeries.reduce((sum, current) => sum + current, 0).toLocaleString()}
+                </p>
+                <p className="mb-2">
+                  <span className="font-medium">Top Category: </span>
+                  {totalBySeries.length > 0 ? totalBySeries[0].name : 'N/A'}
+                </p>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div>
-        <div id="chartOne" className="-ml-5">
-          <ReactApexChart
-            options={state.options}
-            series={state.series}
-            type="area"
-            height={420}
-            width={'100%'}
-          />
-        </div>
-      </div>
-    </div>
+        ) : (
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-500">{loading ? 'Loading chart...' : 'No data available for selected period'}</p>
+          </div>
+        )}
+      </Modal>
+    </>
   );
 };
 
-export default ChartTwo;
+export default ChartCategory;

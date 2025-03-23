@@ -30,6 +30,11 @@ const items = [
     icon: <IconTableColumn className="h-4 w-4 text-neutral-500" />,
   },
   {
+    header: <ChartTwo />,
+    className: 'md:col-span-3',
+    icon: <IconTableColumn className="h-4 w-4 text-neutral-500" />,
+  },
+  {
     header: <ChartThree />,
     className: 'md:col-span-3',
     icon: <IconTableColumn className="h-4 w-4 text-neutral-500" />,
