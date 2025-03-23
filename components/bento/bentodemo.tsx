@@ -8,6 +8,7 @@ import ChartOne from '../charts/chartone';
 import ChartTwo from '../charts/charttwo';
 import ChartThree from '../charts/chartthree';
 import ChartFour from '../charts/chartfour';
+import ChartLowStock from '../charts/chartLowStock';
 
 export function BentoGridHome() {
   return (
@@ -24,6 +25,11 @@ export function BentoGridHome() {
 }
 
 const items = [
+  {
+    header: <ChartLowStock />,
+    className: 'md:col-span-3', // full width
+    icon: <IconTableColumn className="h-4 w-4 text-neutral-500" />,
+  },
   {
     header: <ChartOne />,
     className: 'md:col-span-3', // full width
