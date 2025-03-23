@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { DeleteAlertDialog } from "./alertDelete";
 import { SheetEdit } from "./sheetEdit";
+import { useUser } from '@/contexts/UserContext';
 
 // Fix Product type
 type Product = {
@@ -28,6 +29,7 @@ type Product = {
 const Dropdown = ({ product }: { product: Product }) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const { user, isLoading } = useUser();
 
   const handleDeleteClose = () => {
     setDeleteOpen(false);
@@ -49,7 +51,9 @@ const Dropdown = ({ product }: { product: Product }) => {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setEditOpen(true)}>Edit</DropdownMenuItem>
+        {!isLoading && user?.role === 'admin' && (
           <DropdownMenuItem onClick={() => setDeleteOpen(true)}>Delete</DropdownMenuItem>
+        )}
         </DropdownMenuContent>
       </DropdownMenu>
       <DeleteAlertDialog open={deleteOpen} onClose={handleDeleteClose} data={product} />
