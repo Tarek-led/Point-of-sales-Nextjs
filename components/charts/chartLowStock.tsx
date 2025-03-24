@@ -44,10 +44,6 @@ const initialChartOptions: ApexOptions = {
       formatter: (val) => `${val} units`,
     },
   },
-  responsive: [
-    { breakpoint: 2600, options: { chart: { width: 380 } } },
-    { breakpoint: 640, options: { chart: { width: 200 } } },
-  ],
 };
 
 interface ProductStock {
@@ -144,7 +140,7 @@ const ChartLowStock: React.FC = () => {
       >
         <p className="font-semibold text-secondarychart mb-2">Low Stock Inventory (Top 5)</p>
         {hasData ? (
-          <div className="h-full">
+          <div className="w-full h-full">
             <ReactApexChart
               options={previewOptions}
               series={previewSeries}
