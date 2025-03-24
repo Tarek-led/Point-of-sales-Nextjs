@@ -28,7 +28,7 @@ export default async function RootLayout({
             <NextTopLoader showSpinner={false} />
             {children}
             <ToastContainer />
-            <SyncBackground />
+            {/* <SyncBackground /> */}
           </ThemeProvider>
         </div>
       </body>
