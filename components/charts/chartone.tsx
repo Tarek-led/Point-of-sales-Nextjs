@@ -108,11 +108,19 @@ const ChartOne: React.FC = () => {
       {/* Preview Card */}
       <div
         onClick={() => setIsModalOpen(true)}
-        className="cursor-pointer h-64 rounded-sm border border-stroke bg-white p-4 shadow-de dark:border-strokedark dark:bg-chartbody"
+        // Change from fixed h-64 on all screens to auto height on small screens and h-64 on md and above
+        className="cursor-pointer h-auto md:h-64 rounded-sm border border-stroke bg-white p-4 shadow-de dark:border-strokedark dark:bg-chartbody"
       >
         <p className="font-semibold text-secondarychart mb-2">Total Products Sales</p>
-        <div className="h-full">
-          <ReactApexChart options={previewOptions} series={previewSeries} type="area" height={150} width="100%" />
+        {/* Wrap the chart in a container that fills the available space */}
+        <div className="w-full h-full">
+          <ReactApexChart 
+            options={previewOptions} 
+            series={previewSeries} 
+            type="area" 
+            height={150} 
+            width="100%" 
+          />
         </div>
       </div>
 
@@ -122,7 +130,7 @@ const ChartOne: React.FC = () => {
           <h4 className="text-xl font-semibold text-black dark:text-white">Total Products Sales</h4>
         </div>
         {/* Full chart view with date inputs */}
-        <div className="mb-4 flex gap-4">
+        <div className="mb-4 flex flex-col md:flex-row gap-4">
           <div className="flex items-center">
             <label className="mr-2 text-sm">Start</label>
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8" />
@@ -132,8 +140,14 @@ const ChartOne: React.FC = () => {
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-8" />
           </div>
         </div>
-        <div>
-          <ReactApexChart options={state.options} series={state.series} type="area" height={420} width="100%" />
+        <div className="w-full">
+          <ReactApexChart 
+            options={state.options} 
+            series={state.series} 
+            type="area" 
+            height={420} 
+            width="100%" 
+          />
         </div>
       </Modal>
     </>
