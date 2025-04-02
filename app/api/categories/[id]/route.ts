@@ -9,9 +9,9 @@ export const DELETE = async (
   { params }: { params: { id: string } }
 ) => {
   try {
-    console.log('Attempting to delete category with ID:', params.id); // Debugging log
+    // console.log('Attempting to delete category with ID:', params.id); // Debugging log
 
-    // Check if the category exists before deleting
+    // Checking if the category exists before deleting
     const categoryExists = await prisma.category.findUnique({
       where: { id: String(params.id) },
     });
@@ -23,7 +23,7 @@ export const DELETE = async (
       );
     }
 
-    // Delete the category with the specified id
+    // Deleting the category with the specified id
     const category = await prisma.category.delete({
       where: {
         id: String(params.id), // Use the `id` from URL params

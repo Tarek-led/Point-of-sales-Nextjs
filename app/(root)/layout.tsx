@@ -48,7 +48,7 @@ const RootLayout = ({ children }: RootLayoutProps) => {
   }, []);
 
   return (
-    // NEW: Wrap your app with the UserProvider so that all child components can access the user.
+    // Wrapping app with the UserProvider so that all child components can access the user.
     <UserProvider>
       <div className="bg-gray-300 dark:bg-black">
         <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">

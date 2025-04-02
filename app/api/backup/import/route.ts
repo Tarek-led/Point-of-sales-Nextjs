@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db'; // Prisma client
+import { db } from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
@@ -12,8 +12,9 @@ export async function POST(req: Request) {
     const fileContent = await file.text();
     const backupData = JSON.parse(fileContent);
 
-    // Upsert all data into SQLite in dependency order
-    // 1. Users
+    // Upserting all data into SQLite in dependency order
+
+    // Users
     for (const user of backupData.users || []) {
       await db.user.upsert({
         where: { id: user.id },
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 2. Categories
+    // Categories
     for (const category of backupData.categories || []) {
       await db.category.upsert({
         where: { id: category.id },
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. Product Stocks
+    // Product Stocks
     for (const stock of backupData.productStocks || []) {
       await db.productStock.upsert({
         where: { id: stock.id },
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 4. Transactions (before OnSaleProduct due to foreign key dependency)
+    // Transactions (before upserting OnSaleProduct due to foreign key dependency)
     for (const transaction of backupData.transactions || []) {
       await db.transaction.upsert({
         where: { id: transaction.id },
@@ -78,17 +79,21 @@ export async function POST(req: Request) {
           totalAmount: transaction.totalAmount ? parseFloat(transaction.totalAmount) : null,
           createdAt: new Date(transaction.createdAt),
           isComplete: transaction.isComplete,
+          orderType: transaction.orderType,
+          paymentMethod: transaction.paymentMethod,
         },
         create: {
           id: transaction.id,
           totalAmount: transaction.totalAmount ? parseFloat(transaction.totalAmount) : null,
           createdAt: new Date(transaction.createdAt),
           isComplete: transaction.isComplete,
+          orderType: transaction.orderType,
+          paymentMethod: transaction.paymentMethod,
         },
       });
     }
 
-    // 5. Products (after ProductStock due to foreign key dependency)
+    // Products (after ProductStock due to foreign key dependency)
     for (const product of backupData.products || []) {
       await db.product.upsert({
         where: { id: product.id },
@@ -106,7 +111,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 6. OnSaleProducts (after Products and Transactions due to foreign key dependencies)
+    // OnSaleProducts (after Products and Transactions due to foreign key dependencies)
     for (const sale of backupData.onSaleProducts || []) {
       await db.onSaleProduct.upsert({
         where: { id: sale.id },
@@ -126,7 +131,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 7. Shop Data
+    // Shop Data
     if (backupData.shopData) {
       await db.shopData.upsert({
         where: { id: backupData.shopData.id },

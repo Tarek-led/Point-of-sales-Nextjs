@@ -3,7 +3,7 @@ import { db } from '@/lib/db'; // Prisma client
 
 export async function GET() {
   try {
-    // Fetch all data from SQLite using Prisma
+    // Fetching all data from SQLite using Prisma
     const users = await db.user.findMany();
     const categories = await db.category.findMany();
     const transactions = await db.transaction.findMany({ 
@@ -38,7 +38,7 @@ export async function GET() {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="backup-${Date.now()}.json"`,
+        'Content-Disposition': `attachment; filename="backup-${Date.now()}.json"`, // Filename with timestamp
       },
     });
   } catch (error) {

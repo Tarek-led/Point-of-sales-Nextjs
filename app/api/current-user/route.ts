@@ -8,13 +8,9 @@ export async function GET(req: Request) {
   try {
     // parse cookies from the request headers
     const cookies = parse(req.headers.get('cookie') || '');
-    // Assuming you're using a cookie or session-based system to get the logged-in user's ID
-    // Example with cookies (replace this with your actual session or JWT logic):
-    const userId = cookies['user-id']; // Example: retrieving the user ID from a cookie
+    const userId = cookies['user-id']; // retrieving the user ID from a cookie
 
-    // If you are using JWT, you might get the user info from the token, like:
-    // const userId = extractUserIdFromJWT(req.headers['Authorization']);
-
+    // Check if userId exists
     if (!userId) {
       return new Response(
         JSON.stringify({ message: 'User not authenticated' }),
@@ -34,7 +30,7 @@ export async function GET(req: Request) {
       );
     }
 
-    // Return user details (e.g., username and role)
+    // Return user details
     return new Response(
       JSON.stringify({ username: user.username, role: user.role }),
       { status: 200 }
