@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
         const product = onSaleProduct.product.productstock;
         const sellPrice = productStock.sellprice * onSaleProduct.quantity;
         const buyPrice = product.price * onSaleProduct.quantity;
-        const tax = sellPrice * (taxRate / 100); // Calculate tax based on the tax rate
+        const tax = sellPrice * (taxRate / 100); // Calculating tax based on the tax rate
         const sellPriceWithTax = sellPrice + tax;
         const profit = sellPrice - buyPrice;
         costPriceTotal += profit;
@@ -108,7 +108,6 @@ export async function GET(req: NextRequest) {
     // Return the grouped data as a JSON response with a 200 status code
     return NextResponse.json({ groupedData }, { status: 200 });
   } catch (error) {
-    // Log and return an error message as a JSON response with a 500 status code if there's an error
     console.error('Error occurred:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },

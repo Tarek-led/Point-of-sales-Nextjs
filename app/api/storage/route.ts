@@ -14,7 +14,7 @@ export async function GET() {
         },
         category: { // Add category relation
           select: {
-            name: true, // Only need the category name
+            name: true,
           },
         },
       },

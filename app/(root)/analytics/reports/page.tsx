@@ -38,45 +38,47 @@ const DailyReportDetails: React.FC = () => {
   }, [date]);
 
   return (
-    <div className="p-4 bg-background text-foreground min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">Daily Sales Details</h1>
-      <div className="mb-4 flex items-center gap-4">
-        <label className="font-semibold">Select Date:</label>
-        <Input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="h-10"
-        />
-      </div>
-      {loading ? (
-        <p className="py-4">Loading report...</p>
-      ) : error ? (
-        <p className="py-4 text-red-500">Error: {error}</p>
-      ) : report.length === 0 ? (
-        <p className="py-4">No sales data for this day.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-card border border-border rounded-md">
-            <thead>
-              <tr>
-                <th className="py-2 px-4 border-b border-border">Category</th>
-                <th className="py-2 px-4 border-b border-border">Total Quantity</th>
-                <th className="py-2 px-4 border-b border-border">Total Sales</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.map((r) => (
-                <tr key={r.category} className="hover:bg-muted">
-                  <td className="py-2 px-4 border-b border-border">{r.category}</td>
-                  <td className="py-2 px-4 border-b border-border">{r.totalQuantity}</td>
-                  <td className="py-2 px-4 border-b border-border">${r.totalSales.toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="min-h-screen bg-background text-foreground py-8">
+      <div className="container mx-auto px-4">
+        <h1 className="text-3xl font-bold mb-6">Daily Sales Details</h1>
+        <div className="mb-6 flex flex-col sm:flex-row items-center gap-4">
+          <label className="font-semibold text-lg">Select Date:</label>
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="h-10 text-base"
+          />
         </div>
-      )}
+        {loading ? (
+          <p className="py-4 text-center">Loading report...</p>
+        ) : error ? (
+          <p className="py-4 text-center text-red-500">Error: {error}</p>
+        ) : report.length === 0 ? (
+          <p className="py-4 text-center">No sales data for this day.</p>
+        ) : (
+          <div className="overflow-x-auto shadow-lg rounded-lg">
+            <table className="min-w-full bg-card border border-border rounded-md">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="py-3 px-6 border-b border-border text-left">Category</th>
+                  <th className="py-3 px-6 border-b border-border text-left">Total Quantity</th>
+                  <th className="py-3 px-6 border-b border-border text-left">Total Sales</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.map((r) => (
+                  <tr key={r.category} className="hover:bg-muted">
+                    <td className="py-3 px-6 border-b border-border">{r.category}</td>
+                    <td className="py-3 px-6 border-b border-border">{r.totalQuantity}</td>
+                    <td className="py-3 px-6 border-b border-border">${r.totalSales.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
