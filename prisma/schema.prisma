@@ -16,6 +16,19 @@ model User {
   image         String?
   password      String?
   role          String  @default("UNKNOW")
+
+  sessions     Session[]
+}
+
+model Session {
+  token     String   @id @unique // The secure session token itself acts as the ID
+  expiresAt DateTime            // When the session expires
+  userId    String              // Foreign key to link to the User
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Define the relation
+  createdAt DateTime @default(now()) // Optional: track when session was created
+
+  @@index([userId])    // Index for faster lookups by user
+  @@index([expiresAt]) // Index for potential cleanup jobs
 }
 
 model ProductStock {
